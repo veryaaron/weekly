@@ -93,8 +93,10 @@ document.addEventListener('DOMContentLoaded', function() {
  * Called after DOM and config are both loaded
  */
 function initializeGoogleSignIn() {
+    console.log('Initializing Google Sign-In...');
+    
     if (!window.google || !window.google.accounts) {
-        console.error('Google Sign-In library not loaded');
+        console.log('Google Sign-In library not loaded yet, retrying...');
         setTimeout(initializeGoogleSignIn, 100); // Retry after 100ms
         return;
     }
@@ -102,36 +104,69 @@ function initializeGoogleSignIn() {
     const clientId = FEEDBACK_CONFIG.GOOGLE_CLIENT_ID;
     
     if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
-        document.getElementById('authError').innerHTML = `
-            <div class="error-message">
-                Google Client ID not configured. Please update config.js
-            </div>
-        `;
+        hideLoadingShowError('Google Client ID not configured. Please update config.js');
         return;
     }
     
-    // Initialize Google Identity Services
-    google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleCredentialResponse,
-        auto_select: false, // Disable auto-select to prevent race condition
-        cancel_on_tap_outside: false
-    });
+    try {
+        // Initialize Google Identity Services
+        google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleCredentialResponse,
+            auto_select: false, // Disable auto-select to prevent issues
+            cancel_on_tap_outside: false,
+            itp_support: true // Intelligent Tracking Prevention support for Safari/iOS
+        });
+        
+        // Render the sign-in button
+        google.accounts.id.renderButton(
+            document.getElementById('g_id_signin'),
+            {
+                type: 'standard',
+                size: 'large',
+                theme: 'outline',
+                text: 'sign_in_with',
+                shape: 'rectangular',
+                logo_alignment: 'left',
+                width: 280
+            }
+        );
+        
+        // Hide loading indicator
+        const loadingEl = document.getElementById('signinLoading');
+        if (loadingEl) loadingEl.style.display = 'none';
+        
+        console.log('Google Sign-In initialized successfully');
+        
+        // Show help button after 5 seconds in case user has issues
+        setTimeout(() => {
+            const helpEl = document.getElementById('authHelp');
+            const authCard = document.getElementById('authCard');
+            // Only show if still on auth screen
+            if (helpEl && authCard && authCard.style.display !== 'none') {
+                helpEl.style.display = 'block';
+            }
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Error initializing Google Sign-In:', error);
+        hideLoadingShowError('Error loading sign-in. Please refresh the page.');
+    }
+}
+
+/**
+ * Hide loading indicator and show error message
+ */
+function hideLoadingShowError(message) {
+    const loadingEl = document.getElementById('signinLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
     
-    // Render the sign-in button
-    google.accounts.id.renderButton(
-        document.getElementById('g_id_signin'),
-        {
-            type: 'standard',
-            size: 'large',
-            theme: 'outline',
-            text: 'sign_in_with',
-            shape: 'rectangular',
-            logo_alignment: 'left'
-        }
-    );
+    const helpEl = document.getElementById('authHelp');
+    if (helpEl) helpEl.style.display = 'block';
     
-    console.log('Google Sign-In initialized');
+    document.getElementById('authError').innerHTML = `
+        <div class="error-message">${message}</div>
+    `;
 }
 
 // ========================================
