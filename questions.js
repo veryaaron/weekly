@@ -203,12 +203,8 @@ QUESTION: [your single pertinent question]`;
             question: 'Is there anything else important you\'d like to discuss?'
         };
     }
-            question: 'Is there anything else important you\'d like to discuss?'
-        };
-    }
 }
 
 // Make available globally
 window.QUESTIONS = QUESTIONS;
 window.generateAIFollowUpQuestion = generateAIFollowUpQuestion;
-
