@@ -4,418 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Team Feedback</title>
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Google Sign-In -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #0F172A;
-            --accent: #3B82F6;
-            --bg: #F8FAFC;
-            --card: #FFFFFF;
-            --text: #1E293B;
-            --text-light: #64748B;
-            --border: #E2E8F0;
-            --success: #10B981;
-            --warning: #F59E0B;
-            --error: #EF4444;
-        }
-
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            min-height: 100vh;
-            padding: 2rem 1rem;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-            animation: fadeInDown 0.6s ease;
-        }
-
-        .header h1 {
-            font-family: 'Space Mono', monospace;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        .header p {
-            color: var(--text-light);
-            font-size: 1.1rem;
-        }
-
-        .auth-card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 3rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            text-align: center;
-            animation: fadeInUp 0.6s ease;
-        }
-
-        .auth-card h2 {
-            margin-bottom: 1rem;
-            color: var(--primary);
-        }
-
-        .auth-card p {
-            margin-bottom: 2rem;
-            color: var(--text-light);
-        }
-
-        .google-signin-container {
-            display: flex;
-            justify-content: center;
-            margin: 2rem 0;
-        }
-
-        .error-message {
-            background: #FEE2E2;
-            border-left: 4px solid var(--error);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1.5rem;
-            color: #991B1B;
-            text-align: left;
-        }
-
-        .error-message strong {
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 2.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            animation: fadeInUp 0.6s ease;
-            display: none;
-        }
-
-        .form-card.active {
-            display: block;
-        }
-
-        .user-info {
-            background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-            padding: 1.25rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .user-info-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-        }
-
-        .user-details {
-            text-align: left;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .user-email {
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-
-        .btn-signout {
-            background: white;
-            border: 2px solid var(--border);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-signout:hover {
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: var(--border);
-            border-radius: 4px;
-            margin-bottom: 2rem;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), #2563EB);
-            transition: width 0.3s ease;
-        }
-
-        .question-container {
-            min-height: 400px;
-        }
-
-        .question {
-            display: none;
-        }
-
-        .question.active {
-            display: block;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .question-label {
-            display: block;
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: 0.75rem;
-            font-size: 1.2rem;
-        }
-
-        .question-hint {
-            display: block;
-            color: var(--text-light);
-            font-size: 0.95rem;
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-        }
-
-        textarea {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 1rem;
-            color: var(--text);
-            transition: all 0.3s ease;
-            background: var(--bg);
-            min-height: 150px;
-            resize: vertical;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            background: white;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .character-count {
-            text-align: right;
-            font-size: 0.85rem;
-            color: var(--text-light);
-            margin-top: 0.5rem;
-        }
-
-        .ai-suggestion {
-            margin-top: 1.5rem;
-            padding: 1.25rem;
-            background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-            border-left: 4px solid var(--accent);
-            border-radius: 8px;
-            animation: slideIn 0.4s ease;
-        }
-
-        .ai-suggestion-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-            font-weight: 600;
-            color: var(--accent);
-            font-size: 1rem;
-        }
-
-        .ai-suggestion-content {
-            color: var(--text);
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        button {
-            padding: 0.875rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-            flex: 1;
-        }
-
-        .btn-primary:hover {
-            background: #2563EB;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-
-        .btn-primary:disabled {
-            background: var(--border);
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: white;
-            color: var(--text);
-            border: 2px solid var(--border);
-            flex: 0.5;
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .btn-ai {
-            background: var(--primary);
-            color: white;
-            width: 100%;
-            margin-top: 1rem;
-        }
-
-        .btn-ai:hover {
-            background: #1E293B;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
-        }
-
-        .loading {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .success-message {
-            background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
-            border-left: 4px solid var(--success);
-            padding: 2rem;
-            border-radius: 8px;
-            text-align: center;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .success-message h3 {
-            color: #065F46;
-            margin-bottom: 0.5rem;
-            font-size: 1.5rem;
-        }
-
-        .success-message p {
-            color: #047857;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @media (max-width: 640px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .form-card, .auth-card {
-                padding: 1.5rem;
-            }
-
-            .btn-group {
-                flex-direction: column;
-            }
-
-            .user-info {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-        }
-    </style>
+    
+    <!-- Application Files -->
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <div class="header">
             <h1>Weekly Feedback</h1>
             <p>Share your week's highlights, challenges, and ideas</p>
@@ -428,7 +31,7 @@
             
             <div class="google-signin-container">
                 <div id="g_id_onload"
-                     data-client_id="287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com"
+                     data-client_id=""
                      data-callback="handleCredentialResponse"
                      data-auto_prompt="false">
                 </div>
@@ -447,6 +50,7 @@
 
         <!-- Feedback Form -->
         <div class="form-card" id="formCard">
+            <!-- User Info Bar -->
             <div class="user-info">
                 <div class="user-info-left">
                     <img id="userAvatar" class="user-avatar" src="" alt="User">
@@ -458,10 +62,12 @@
                 <button class="btn-signout" onclick="signOut()">Sign Out</button>
             </div>
 
+            <!-- Progress Bar -->
             <div class="progress-bar">
                 <div class="progress-fill" id="progressBar" style="width: 0%"></div>
             </div>
 
+            <!-- Form -->
             <form id="feedbackForm">
                 <div class="question-container">
                     <!-- Question 1: Accomplishments -->
@@ -469,7 +75,7 @@
                         <label class="question-label">Key Accomplishments</label>
                         <span class="question-hint">What significant progress did you or your team make this week? Think about completed projects, milestones reached, problems solved, or goals achieved.</span>
                         <textarea id="accomplishments" required></textarea>
-                        <div class="character-count" id="accompCount">0 characters</div>
+                        <div class="character-count" id="accomplishmentsCount">0 characters</div>
                         <button type="button" class="btn-ai" id="aiBtn1" onclick="getAISuggestion(1)">✨ Get AI Help to Improve This</button>
                         <div id="aiSuggestion1"></div>
                         <div class="btn-group">
@@ -519,7 +125,7 @@
                         </div>
                     </div>
 
-                    <!-- Success Message -->
+                    <!-- Success Screen -->
                     <div class="question" id="successScreen" style="display: none;">
                         <div class="success-message">
                             <h3>✓ Feedback Submitted Successfully!</h3>
@@ -531,266 +137,15 @@
         </div>
     </div>
 
+    <!-- Initialize Google OAuth with Client ID from config -->
     <script>
-        // GOOGLE OAUTH CONFIGURATION
-        let currentUser = null;
-        let currentUserData = null;
-
-        // Handle Google Sign-In response
-        function handleCredentialResponse(response) {
-            const credential = response.credential;
-            const payload = parseJwt(credential);
-            
-            // Verify email domain is kubapay.com
-            if (!payload.email.endsWith('@kubapay.com')) {
-                document.getElementById('authError').innerHTML = `
-                    <div class="error-message">
-                        <strong>⛔ Access Denied</strong>
-                        You must sign in with a @kubapay.com email address.<br>
-                        Your email: ${payload.email}
-                    </div>
-                `;
-                return;
-            }
-
-            // Store user data
-            currentUser = payload.email;
-            currentUserData = {
-                email: payload.email,
-                name: payload.name,
-                picture: payload.picture,
-                givenName: payload.given_name
-            };
-            
-            // Show form, hide auth
-            document.getElementById('authCard').style.display = 'none';
-            document.getElementById('formCard').classList.add('active');
-            
-            // Populate user info
-            document.getElementById('userName').textContent = currentUserData.name;
-            document.getElementById('userEmail').textContent = currentUserData.email;
-            document.getElementById('userAvatar').src = currentUserData.picture;
-            
-            // Reset to first question
-            currentQuestion = 1;
-            updateProgress();
-        }
-
-        // Parse JWT token to extract user info
-        function parseJwt(token) {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        }
-
-        // Sign out function
-        function signOut() {
-            google.accounts.id.disableAutoSelect();
-            currentUser = null;
-            currentUserData = null;
-            document.getElementById('formCard').classList.remove('active');
-            document.getElementById('authCard').style.display = 'block';
-            document.getElementById('authError').innerHTML = '';
-            document.getElementById('feedbackForm').reset();
-            
-            // Reset all suggestions
-            for (let i = 1; i <= 4; i++) {
-                document.getElementById('aiSuggestion' + i).innerHTML = '';
-            }
-            
-            // Reset to first question
-            document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
-            document.getElementById('question1').classList.add('active');
-            currentQuestion = 1;
-            updateProgress();
-        }
-
-        // MULTI-STEP FORM LOGIC
-        let currentQuestion = 1;
-        const totalQuestions = 4;
-
-        const textareas = {
-            accomplishments: document.getElementById('accomplishments'),
-            blockers: document.getElementById('blockers'),
-            morale: document.getElementById('morale'),
-            ideas: document.getElementById('ideas')
-        };
-
-        // Character counters
-        Object.entries(textareas).forEach(([name, textarea]) => {
-            const counter = document.getElementById(`${name}Count`);
-            textarea.addEventListener('input', () => {
-                counter.textContent = `${textarea.value.length} characters`;
-            });
-        });
-
-        function updateProgress() {
-            const progress = (currentQuestion / totalQuestions) * 100;
-            document.getElementById('progressBar').style.width = progress + '%';
-        }
-
-        function nextQuestion(current) {
-            // Validate current question
-            const textarea = Object.values(textareas)[current - 1];
-            if (textarea.required && !textarea.value.trim()) {
-                alert('Please provide an answer before continuing');
-                return;
-            }
-
-            // Hide current, show next
-            document.getElementById('question' + current).classList.remove('active');
-            currentQuestion = current + 1;
-            document.getElementById('question' + currentQuestion).classList.add('active');
-            updateProgress();
-            window.scrollTo(0, 0);
-        }
-
-        function prevQuestion(current) {
-            document.getElementById('question' + current).classList.remove('active');
-            currentQuestion = current - 1;
-            document.getElementById('question' + currentQuestion).classList.add('active');
-            updateProgress();
-            window.scrollTo(0, 0);
-        }
-
-        // AI SUGGESTION LOGIC
-        async function getAISuggestion(questionNum) {
-            const btn = document.getElementById('aiBtn' + questionNum);
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Analyzing...';
-
-            const textareaMap = {
-                1: 'accomplishments',
-                2: 'blockers',
-                3: 'morale',
-                4: 'ideas'
-            };
-
-            const field = textareaMap[questionNum];
-            const response = textareas[field].value;
-
-            if (response.trim().length < 10) {
-                alert('Please write at least a sentence before asking for AI help');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                return;
-            }
-
-            try {
-                const suggestion = await getClaudeSuggestion(field, response);
-                displaySuggestion(questionNum, suggestion);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            } catch (error) {
-                console.error('AI error:', error);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                alert('Could not get AI suggestions. Please continue with your response.');
-            }
-        }
-
-        async function getClaudeSuggestion(field, response) {
-            const prompts = {
-                accomplishments: `The user wrote: "${response}"\n\nThis is for their weekly accomplishments. Provide 2-3 specific suggestions to make this more impactful: add metrics/data, explain the impact/outcome, or clarify what was achieved. Be constructive and encouraging.`,
-                blockers: `The user wrote: "${response}"\n\nThis describes their blockers/challenges. Provide 2-3 specific suggestions: make the blocker more clear, specify what help they need, or explain the impact. Be supportive and solution-focused.`,
-                morale: `The user wrote: "${response}"\n\nThis is about team morale. Provide 2-3 specific suggestions: add concrete examples, explain what's driving the energy (positive or negative), or clarify team sentiment. Be empathetic.`,
-                ideas: `The user wrote: "${response}"\n\nThis is a bright idea. Provide 2-3 specific suggestions: elaborate on the potential impact, explain implementation approach, or clarify the opportunity. Be encouraging of innovation.`
-            };
-
-            const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 1000,
-                    messages: [{
-                        role: 'user',
-                        content: prompts[field]
-                    }]
-                })
-            });
-
-            const data = await apiResponse.json();
-            return data.content[0].text;
-        }
-
-        function displaySuggestion(questionNum, suggestion) {
-            const suggestionDiv = document.getElementById('aiSuggestion' + questionNum);
-            suggestionDiv.innerHTML = `
-                <div class="ai-suggestion">
-                    <div class="ai-suggestion-header">
-                        🤖 Claude's Suggestions
-                    </div>
-                    <div class="ai-suggestion-content">
-                        ${suggestion}
-                    </div>
-                </div>
-            `;
-        }
-
-        // FORM SUBMISSION
-        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!currentUser) {
-                alert('Please sign in first');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="loading"></span> Submitting...';
-
-            const formData = {
-                timestamp: new Date().toISOString(),
-                name: currentUserData.name,
-                email: currentUserData.email,
-                accomplishments: textareas.accomplishments.value,
-                blockers: textareas.blockers.value,
-                morale: textareas.morale.value,
-                ideas: textareas.ideas.value
-            };
-
-            try {
-                await submitToGoogleSheets(formData);
-                
-                // Hide form, show success
-                document.getElementById('question4').classList.remove('active');
-                document.getElementById('successScreen').style.display = 'block';
-                document.getElementById('progressBar').style.width = '100%';
-
-                // Reset after 5 seconds
-                setTimeout(() => {
-                    signOut();
-                }, 5000);
-            } catch (error) {
-                console.error('Submission error:', error);
-                alert('Could not submit feedback. Please try again or contact your manager.');
-                submitBtn.innerHTML = 'Submit Feedback ✓';
-                submitBtn.disabled = false;
+        // Set Google Client ID from config
+        document.addEventListener('DOMContentLoaded', function() {
+            const gidOnload = document.getElementById('g_id_onload');
+            if (gidOnload && FEEDBACK_CONFIG) {
+                gidOnload.setAttribute('data-client_id', FEEDBACK_CONFIG.GOOGLE_CLIENT_ID);
             }
         });
-
-        async function submitToGoogleSheets(data) {
-            const SCRIPT_URL = 'https://script.google.com/a/macros/kubapay.com/s/AKfycbwT3ch8qlftL0rOz6ZwvzA_U8GF44JM-YqLwO1HHxwWrMImumlqSKDARNRwnDVqT_BT/exec';
-            
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
     </script>
 </body>
 </html>

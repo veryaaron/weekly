@@ -1,0 +1,497 @@
+/**
+ * STYLES.CSS
+ * ==========
+ * 
+ * All styling for the Weekly Feedback Form
+ */
+
+/* ========================================
+   CSS RESET & BASE STYLES
+   ======================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ========================================
+   CSS VARIABLES (THEME)
+   ======================================== */
+
+:root {
+    --primary: #0F172A;
+    --accent: #3B82F6;
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --text: #1E293B;
+    --text-light: #64748B;
+    --border: #E2E8F0;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+}
+
+/* ========================================
+   BODY & CONTAINER
+   ======================================== */
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* ========================================
+   HEADER
+   ======================================== */
+
+.header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInDown 0.6s ease;
+}
+
+.header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+}
+
+.header p {
+    color: var(--text-light);
+    font-size: 1.1rem;
+}
+
+/* ========================================
+   AUTHENTICATION CARD
+   ======================================== */
+
+.auth-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 3rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    text-align: center;
+    animation: fadeInUp 0.6s ease;
+}
+
+.auth-card h2 {
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.auth-card p {
+    margin-bottom: 2rem;
+    color: var(--text-light);
+}
+
+.google-signin-container {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+/* ========================================
+   ERROR MESSAGES
+   ======================================== */
+
+.error-message {
+    background: #FEE2E2;
+    border-left: 4px solid var(--error);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1.5rem;
+    color: #991B1B;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.error-message strong {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* ========================================
+   FORM CARD
+   ======================================== */
+
+.form-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    animation: fadeInUp 0.6s ease;
+    display: none;
+}
+
+.form-card.active {
+    display: block;
+}
+
+/* ========================================
+   USER INFO BAR
+   ======================================== */
+
+.user-info {
+    background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+    padding: 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-info-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.user-details {
+    text-align: left;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.user-email {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.btn-signout {
+    background: white;
+    border: 2px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-signout:hover {
+    border-color: var(--error);
+    color: var(--error);
+}
+
+/* ========================================
+   PROGRESS BAR
+   ======================================== */
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #2563EB);
+    transition: width 0.3s ease;
+}
+
+/* ========================================
+   QUESTION CONTAINER
+   ======================================== */
+
+.question-container {
+    min-height: 400px;
+}
+
+.question {
+    display: none;
+}
+
+.question.active {
+    display: block;
+    animation: fadeIn 0.4s ease;
+}
+
+.question-label {
+    display: block;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+    font-size: 1.2rem;
+}
+
+.question-hint {
+    display: block;
+    color: var(--text-light);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+/* ========================================
+   FORM INPUTS
+   ======================================== */
+
+textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    color: var(--text);
+    transition: all 0.3s ease;
+    background: var(--bg);
+    min-height: 150px;
+    resize: vertical;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.character-count {
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 0.5rem;
+}
+
+/* ========================================
+   AI SUGGESTIONS
+   ======================================== */
+
+.ai-suggestion {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    animation: slideIn 0.4s ease;
+}
+
+.ai-suggestion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.ai-suggestion-content {
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+
+.btn-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+button {
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: white;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    background: #2563EB;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--text);
+    border: 2px solid var(--border);
+    flex: 0.5;
+}
+
+.btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-ai {
+    background: var(--primary);
+    color: white;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.btn-ai:hover {
+    background: #1E293B;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+}
+
+.btn-ai:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ========================================
+   LOADING SPINNER
+   ======================================== */
+
+.loading {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* ========================================
+   SUCCESS MESSAGE
+   ======================================== */
+
+.success-message {
+    background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+    border-left: 4px solid var(--success);
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    animation: fadeIn 0.5s ease;
+}
+
+.success-message h3 {
+    color: #065F46;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.success-message p {
+    color: #047857;
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes spin {
+    to { 
+        transform: rotate(360deg); 
+    }
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+    }
+    to { 
+        opacity: 1; 
+    }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 640px) {
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .form-card, .auth-card {
+        padding: 1.5rem;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    .user-info {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .btn-secondary {
+        flex: 1;
+    }
+}
