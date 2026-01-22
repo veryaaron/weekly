@@ -45,15 +45,47 @@ function handleCredentialResponse(response) {
     const credential = response.credential;
     const payload = parseJwt(credential);
     
+    console.log('Sign-in attempt:', payload.email);
+    console.log('Config loaded:', !!window.FEEDBACK_CONFIG);
+    console.log('Allowed domains:', window.FEEDBACK_CONFIG?.ALLOWED_DOMAINS);
+    
     // Verify email domain
-    const allowedDomain = FEEDBACK_CONFIG.ALLOWED_DOMAIN;
-    if (!payload.email.endsWith('@' + allowedDomain)) {
+    const allowedDomains = window.FEEDBACK_CONFIG?.ALLOWED_DOMAINS;
+    
+    // If config not loaded yet, reject (shouldn't happen but safety check)
+    if (!allowedDomains) {
         document.getElementById('authError').innerHTML = `
             <div class="error-message">
-                ${FEEDBACK_CONFIG.ERRORS.wrongDomain(payload.email, allowedDomain)}
+                ⛔ Configuration Error<br>
+                Please refresh the page and try again.
             </div>
         `;
+        console.error('FEEDBACK_CONFIG not loaded');
         return;
+    }
+    
+    // If set to ANY_WORKSPACE, skip domain validation
+    // (OAuth consent screen already restricts to Internal workspace users)
+    if (allowedDomains !== 'ANY_WORKSPACE') {
+        const emailDomain = payload.email.split('@')[1];
+        const domains = Array.isArray(allowedDomains) ? allowedDomains : [allowedDomains];
+        const isAllowed = domains.some(domain => emailDomain === domain);
+        
+        console.log('Email domain:', emailDomain);
+        console.log('Checking against:', domains);
+        console.log('Is allowed:', isAllowed);
+        
+        if (!isAllowed) {
+            document.getElementById('authError').innerHTML = `
+                <div class="error-message">
+                    ⛔ Access Denied<br>
+                    You must sign in with an authorized domain.<br>
+                    Allowed domains: ${domains.join(', ')}<br>
+                    Your email: ${payload.email}
+                </div>
+            `;
+            return;
+        }
     }
 
     // Store user data

@@ -9,10 +9,15 @@
 const CONFIG = {
     // Google OAuth Settings
     // Get this from Google Cloud Console > Credentials
-    GOOGLE_CLIENT_ID: '287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID_HERE',
     
     // Domain restriction for email authentication
-    // Only users with emails ending in this domain can access the form
+    // Option 1: Single domain
+    //   ALLOWED_DOMAINS: ['kubapay.com']
+    // Option 2: Multiple domains
+    //   ALLOWED_DOMAINS: ['kubapay.com', 'anotherdomain.com']
+    // Option 3: Any domain in your Google Workspace (OAuth restricts to Internal already)
+    //   ALLOWED_DOMAINS: 'ANY_WORKSPACE'
     ALLOWED_DOMAINS: ['kubapay.com', 'vixtechnology.com'],
     
     // Google Apps Script URL
