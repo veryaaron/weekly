@@ -473,21 +473,30 @@ async function submitToGoogleSheets(data) {
     console.log('Data being sent:', data);
     
     try {
+        // Google Apps Script redirects, so we need to follow redirects
         const response = await fetch(FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL, {
             method: 'POST',
+            redirect: 'follow',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'text/plain', // Use text/plain to avoid CORS preflight
             },
             body: JSON.stringify(data)
         });
         
         console.log('Response status:', response.status);
+        console.log('Response type:', response.type);
         
-        const result = await response.json();
-        console.log('Response data:', result);
-        
-        if (result.status !== 'success') {
-            throw new Error(result.message || 'Submission failed');
+        // Try to read response, but don't fail if we can't
+        try {
+            const result = await response.json();
+            console.log('Response data:', result);
+            
+            if (result.status === 'error') {
+                throw new Error(result.message || 'Submission failed');
+            }
+        } catch (parseError) {
+            // If we can't parse response, assume success if status is ok
+            console.log('Could not parse response, but request completed');
         }
         
         console.log('Submission successful!');

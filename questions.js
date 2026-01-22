@@ -128,8 +128,9 @@ async function generateAIFollowUpQuestion(userData, cachedAnswers) {
         
         const response = await fetch(scriptUrl, {
             method: 'POST',
+            redirect: 'follow',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'text/plain', // Avoid CORS preflight
             },
             body: JSON.stringify({
                 action: 'generate',
@@ -141,6 +142,7 @@ async function generateAIFollowUpQuestion(userData, cachedAnswers) {
         });
         
         console.log('Response status:', response.status);
+        console.log('Response type:', response.type);
         
         const data = await response.json();
         console.log('Response data:', data);
