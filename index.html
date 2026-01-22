@@ -17,8 +17,8 @@
     <!-- Application Logic -->
     <script src="app.js"></script>
     
-    <!-- Google Sign-In (load last, after our scripts) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google Sign-In - DO NOT load with async/defer, we need control over initialization -->
+    <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
     <div class="container">
@@ -34,19 +34,9 @@
             <p>Please sign in with your @kubapay.com Google account</p>
             
             <div class="google-signin-container">
-                <div id="g_id_onload"
-                     data-client_id=""
-                     data-callback="handleCredentialResponse"
-                     data-auto_prompt="false">
-                </div>
-                <div class="g_id_signin"
-                     data-type="standard"
-                     data-size="large"
-                     data-theme="outline"
-                     data-text="sign_in_with"
-                     data-shape="rectangular"
-                     data-logo_alignment="left">
-                </div>
+                <!-- Google Sign-In button will be rendered here -->
+                <div id="g_id_onload"></div>
+                <div id="g_id_signin"></div>
             </div>
 
             <div id="authError"></div>
@@ -140,16 +130,5 @@
             </form>
         </div>
     </div>
-
-    <!-- Initialize Google OAuth with Client ID from config -->
-    <script>
-        // Set Google Client ID from config
-        document.addEventListener('DOMContentLoaded', function() {
-            const gidOnload = document.getElementById('g_id_onload');
-            if (gidOnload && FEEDBACK_CONFIG) {
-                gidOnload.setAttribute('data-client_id', FEEDBACK_CONFIG.GOOGLE_CLIENT_ID);
-            }
-        });
-    </script>
 </body>
 </html>

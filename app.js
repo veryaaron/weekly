@@ -20,6 +20,19 @@ const textareas = {};
 // ========================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Verify config loaded
+    if (!window.FEEDBACK_CONFIG) {
+        console.error('FEEDBACK_CONFIG not loaded!');
+        document.getElementById('authError').innerHTML = `
+            <div class="error-message">
+                Configuration error. Please refresh the page.
+            </div>
+        `;
+        return;
+    }
+    
+    console.log('Config loaded successfully:', window.FEEDBACK_CONFIG.ALLOWED_DOMAINS);
+    
     // Initialize textareas
     const fields = Object.keys(FEEDBACK_CONFIG.FORM_SETTINGS.QUESTIONS);
     fields.forEach(field => {
@@ -31,7 +44,56 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup form submission handler
     document.getElementById('feedbackForm').addEventListener('submit', handleFormSubmit);
+    
+    // Initialize Google Sign-In manually AFTER config is confirmed loaded
+    initializeGoogleSignIn();
 });
+
+/**
+ * Initialize Google Sign-In
+ * Called after DOM and config are both loaded
+ */
+function initializeGoogleSignIn() {
+    if (!window.google || !window.google.accounts) {
+        console.error('Google Sign-In library not loaded');
+        setTimeout(initializeGoogleSignIn, 100); // Retry after 100ms
+        return;
+    }
+    
+    const clientId = FEEDBACK_CONFIG.GOOGLE_CLIENT_ID;
+    
+    if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
+        document.getElementById('authError').innerHTML = `
+            <div class="error-message">
+                Google Client ID not configured. Please update config.js
+            </div>
+        `;
+        return;
+    }
+    
+    // Initialize Google Identity Services
+    google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleCredentialResponse,
+        auto_select: false, // Disable auto-select to prevent race condition
+        cancel_on_tap_outside: false
+    });
+    
+    // Render the sign-in button
+    google.accounts.id.renderButton(
+        document.getElementById('g_id_signin'),
+        {
+            type: 'standard',
+            size: 'large',
+            theme: 'outline',
+            text: 'sign_in_with',
+            shape: 'rectangular',
+            logo_alignment: 'left'
+        }
+    );
+    
+    console.log('Google Sign-In initialized');
+}
 
 // ========================================
 // GOOGLE OAUTH AUTHENTICATION
