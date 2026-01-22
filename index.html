@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Team Feedback</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0F172A;
+            --accent: #3B82F6;
+            --bg: #F8FAFC;
+            --card: #FFFFFF;
+            --text: #1E293B;
+            --text-light: #64748B;
+            --border: #E2E8F0;
+            --success: #10B981;
+            --warning: #F59E0B;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .header h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .form-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .form-group .label-hint {
+            display: block;
+            font-weight: 400;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            color: var(--text);
+            transition: all 0.3s ease;
+            background: var(--bg);
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .character-count {
+            text-align: right;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #2563EB;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+            border-left: 4px solid var(--success);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .success-message h3 {
+            color: #065F46;
+            margin-bottom: 0.5rem;
+        }
+
+        .success-message p {
+            color: #047857;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .form-card {
+                padding: 1.5rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Weekly Feedback</h1>
+            <p>Share your week's highlights, challenges, and ideas</p>
+        </div>
+
+        <div class="form-card">
+            <form id="feedbackForm">
+                <div class="form-group">
+                    <label for="name">
+                        Your Name
+                        <span class="label-hint">So we know who's providing feedback</span>
+                    </label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="accomplishments">
+                        Key Accomplishments
+                        <span class="label-hint">What significant progress did you or your team make this week?</span>
+                    </label>
+                    <textarea id="accomplishments" name="accomplishments" required></textarea>
+                    <div class="character-count" id="accompCount">0 characters</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="blockers">
+                        Blockers & Challenges
+                        <span class="label-hint">What obstacles need addressing or support?</span>
+                    </label>
+                    <textarea id="blockers" name="blockers" required></textarea>
+                    <div class="character-count" id="blockersCount">0 characters</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="morale">
+                        Team Morale & Energy
+                        <span class="label-hint">How is the team feeling? Any concerns or positive momentum?</span>
+                    </label>
+                    <textarea id="morale" name="morale" required></textarea>
+                    <div class="character-count" id="moraleCount">0 characters</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ideas">
+                        Bright Ideas
+                        <span class="label-hint">Any innovative suggestions or opportunities you've identified?</span>
+                    </label>
+                    <textarea id="ideas" name="ideas"></textarea>
+                    <div class="character-count" id="ideasCount">0 characters</div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        Submit Feedback
+                    </button>
+                </div>
+
+                <div id="successMessage"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Character counters
+        const textareas = {
+            accomplishments: document.getElementById('accomplishments'),
+            blockers: document.getElementById('blockers'),
+            morale: document.getElementById('morale'),
+            ideas: document.getElementById('ideas')
+        };
+
+        Object.entries(textareas).forEach(([name, textarea]) => {
+            const counter = document.getElementById(`${name}Count`);
+            textarea.addEventListener('input', () => {
+                counter.textContent = `${textarea.value.length} characters`;
+            });
+        });
+
+        // Form submission
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Submitting...';
+
+            const formData = {
+                timestamp: new Date().toISOString(),
+                name: document.getElementById('name').value,
+                accomplishments: textareas.accomplishments.value,
+                blockers: textareas.blockers.value,
+                morale: textareas.morale.value,
+                ideas: textareas.ideas.value
+            };
+
+            try {
+                await submitToGoogleSheets(formData);
+                
+                document.getElementById('successMessage').innerHTML = `
+                    <div class="success-message">
+                        <h3>✓ Feedback Submitted Successfully!</h3>
+                        <p>Thank you for sharing your weekly update. Your manager will review this shortly.</p>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    document.getElementById('feedbackForm').reset();
+                    document.getElementById('successMessage').innerHTML = '';
+                    Object.values(textareas).forEach(textarea => {
+                        textarea.dispatchEvent(new Event('input'));
+                    });
+                }, 3000);
+
+                submitBtn.innerHTML = 'Submit Feedback';
+                submitBtn.disabled = false;
+            } catch (error) {
+                console.error('Submission error:', error);
+                alert('Could not submit feedback. Please try again or contact your manager.');
+                submitBtn.innerHTML = 'Submit Feedback';
+                submitBtn.disabled = false;
+            }
+        });
+
+        async function submitToGoogleSheets(data) {
+            const SCRIPT_URL = 'https://script.google.com/a/macros/kubapay.com/s/AKfycbwT3ch8qlftL0rOz6ZwvzA_U8GF44JM-YqLwO1HHxwWrMImumlqSKDARNRwnDVqT_BT/exec';
+            
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    </script>
+</body>
+</html>
