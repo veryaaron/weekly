@@ -9,7 +9,7 @@
 const CONFIG = {
     // Google OAuth Settings
     // Get this from Google Cloud Console > Credentials
-    GOOGLE_CLIENT_ID: '287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID_HERE',
     
     // Domain restriction for email authentication
     // Option 1: Single domain
@@ -18,7 +18,7 @@ const CONFIG = {
     //   ALLOWED_DOMAINS: ['kubapay.com', 'anotherdomain.com']
     // Option 3: Any domain in your Google Workspace (OAuth restricts to Internal already)
     //   ALLOWED_DOMAINS: 'ANY_WORKSPACE'
-    ALLOWED_DOMAINS: ['kubapay.com'],
+    ALLOWED_DOMAINS: ['kubapay.com', 'vixtechnology.com'],
     
     // Google Apps Script URL
     // This is where form submissions are sent
@@ -35,38 +35,8 @@ const CONFIG = {
     
     // Form Settings
     FORM_SETTINGS: {
-        // Minimum characters before AI suggestions are enabled
-        MIN_CHARS_FOR_AI: 10,
-        
         // Auto-logout after successful submission (milliseconds)
-        AUTO_LOGOUT_DELAY: 5000, // 5 seconds
-        
-        // Total number of questions (excluding name)
-        TOTAL_QUESTIONS: 4,
-        
-        // Question configuration
-        QUESTIONS: {
-            accomplishments: {
-                required: true,
-                label: 'Key Accomplishments',
-                hint: 'What significant progress did you or your team make this week? Think about completed projects, milestones reached, problems solved, or goals achieved.'
-            },
-            blockers: {
-                required: true,
-                label: 'Blockers & Challenges',
-                hint: 'What obstacles are preventing progress? What support or resources do you need? Be specific about what\'s blocking you and what would help resolve it.'
-            },
-            morale: {
-                required: true,
-                label: 'Team Morale & Energy',
-                hint: 'How is your team feeling right now? What\'s driving energy levels? Any concerns or positive momentum? Include specific examples or observations.'
-            },
-            ideas: {
-                required: false,
-                label: 'Bright Ideas',
-                hint: 'Any innovative suggestions or opportunities you\'ve identified? What\'s the potential impact? How might it be implemented? (Optional - skip if you don\'t have any this week)'
-            }
-        }
+        AUTO_LOGOUT_DELAY: 5000 // 5 seconds
     },
     
     // UI Text Configuration

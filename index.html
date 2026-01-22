@@ -14,6 +14,9 @@
     <!-- Configuration (must load first) -->
     <script src="config.js"></script>
     
+    <!-- Questions Definition -->
+    <script src="questions.js"></script>
+    
     <!-- Application Logic -->
     <script src="app.js"></script>
     
@@ -66,8 +69,8 @@
                 <div class="question-container">
                     <!-- Question 1: Accomplishments -->
                     <div class="question active" id="question1">
-                        <label class="question-label">Key Accomplishments</label>
-                        <span class="question-hint">What significant progress did you or your team make this week? Think about completed projects, milestones reached, problems solved, or goals achieved.</span>
+                        <label class="question-label">Key Accomplishments This Week</label>
+                        <span class="question-hint">Loading...</span>
                         <textarea id="accomplishments" required></textarea>
                         <div class="character-count" id="accomplishmentsCount">0 characters</div>
                         <button type="button" class="btn-ai" id="aiBtn1" onclick="getAISuggestion(1)">✨ Get AI Help to Improve This</button>

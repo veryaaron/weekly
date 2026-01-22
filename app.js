@@ -15,12 +15,34 @@ let currentQuestion = 1;
 
 const textareas = {};
 
+// Cache for storing answers as user progresses
+const answerCache = {};
+
+// ========================================
+// CACHE HELPER FUNCTIONS
+// ========================================
+
+/**
+ * Cache an answer for a specific question
+ */
+function cacheAnswer(questionField, value) {
+    answerCache[questionField] = value;
+    console.log('Cached answer for:', questionField, '- Length:', value.length);
+}
+
+/**
+ * Get cached answer for a specific question
+ */
+function getCachedAnswer(questionField) {
+    return answerCache[questionField] || '';
+}
+
 // ========================================
 // INITIALIZATION
 // ========================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Verify config loaded
+    // Verify config and questions loaded
     if (!window.FEEDBACK_CONFIG) {
         console.error('FEEDBACK_CONFIG not loaded!');
         document.getElementById('authError').innerHTML = `
@@ -31,10 +53,21 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    if (!window.QUESTIONS) {
+        console.error('QUESTIONS not loaded!');
+        document.getElementById('authError').innerHTML = `
+            <div class="error-message">
+                Questions not loaded. Please refresh the page.
+            </div>
+        `;
+        return;
+    }
+    
     console.log('Config loaded successfully:', window.FEEDBACK_CONFIG.ALLOWED_DOMAINS);
+    console.log('Questions loaded:', QUESTIONS.getOrder());
     
     // Initialize textareas
-    const fields = Object.keys(FEEDBACK_CONFIG.FORM_SETTINGS.QUESTIONS);
+    const fields = QUESTIONS.getOrder();
     fields.forEach(field => {
         textareas[field] = document.getElementById(field);
     });
@@ -156,7 +189,8 @@ function handleCredentialResponse(response) {
         email: payload.email,
         name: payload.name,
         picture: payload.picture,
-        givenName: payload.given_name
+        givenName: payload.given_name,
+        firstName: payload.given_name || payload.name.split(' ')[0] // Extract first name
     };
     
     // Show form, hide auth
@@ -167,6 +201,13 @@ function handleCredentialResponse(response) {
     document.getElementById('userName').textContent = currentUserData.name;
     document.getElementById('userEmail').textContent = currentUserData.email;
     document.getElementById('userAvatar').src = currentUserData.picture;
+    
+    // Set dynamic hint for accomplishments question
+    const accomplishmentsHint = document.querySelector('#question1 .question-hint');
+    if (accomplishmentsHint) {
+        const question = QUESTIONS.DEFINITIONS.accomplishments;
+        accomplishmentsHint.textContent = question.generateHint(currentUserData, answerCache);
+    }
     
     // Reset to first question
     currentQuestion = 1;
@@ -198,8 +239,7 @@ function signOut() {
     document.getElementById('feedbackForm').reset();
     
     // Reset all suggestions
-    const totalQuestions = FEEDBACK_CONFIG.FORM_SETTINGS.TOTAL_QUESTIONS;
-    for (let i = 1; i <= totalQuestions; i++) {
+    for (let i = 1; i <= QUESTIONS.TOTAL; i++) {
         document.getElementById('aiSuggestion' + i).innerHTML = '';
     }
     
@@ -232,7 +272,7 @@ function setupCharacterCounters() {
  * Update progress bar based on current question
  */
 function updateProgress() {
-    const totalQuestions = FEEDBACK_CONFIG.FORM_SETTINGS.TOTAL_QUESTIONS;
+    const totalQuestions = QUESTIONS.TOTAL;
     const progress = (currentQuestion / totalQuestions) * 100;
     document.getElementById('progressBar').style.width = progress + '%';
 }
@@ -242,15 +282,20 @@ function updateProgress() {
  */
 function nextQuestion(current) {
     // Validate current question
-    const fields = Object.keys(FEEDBACK_CONFIG.FORM_SETTINGS.QUESTIONS);
-    const field = fields[current - 1];
-    const config = FEEDBACK_CONFIG.FORM_SETTINGS.QUESTIONS[field];
+    const field = QUESTIONS.getFieldByIndex(current);
+    const question = QUESTIONS.DEFINITIONS[field];
     const textarea = textareas[field];
     
-    if (config.required && !textarea.value.trim()) {
-        alert(FEEDBACK_CONFIG.ERRORS.missingAnswer);
+    if (question.required && !textarea.value.trim()) {
+        alert('Please provide an answer before continuing');
         return;
     }
+    
+    // Cache the answer before moving on
+    cacheAnswer(field, textarea.value);
+    
+    console.log('Moving from question', current, 'to', current + 1);
+    console.log('Current cache:', answerCache);
 
     // Hide current, show next
     document.getElementById('question' + current).classList.remove('active');
@@ -264,9 +309,26 @@ function nextQuestion(current) {
  * Navigate to previous question
  */
 function prevQuestion(current) {
+    // Cache current answer before going back
+    const field = QUESTIONS.getFieldByIndex(current);
+    cacheAnswer(field, textareas[field].value);
+    
     document.getElementById('question' + current).classList.remove('active');
     currentQuestion = current - 1;
     document.getElementById('question' + currentQuestion).classList.add('active');
+    
+    // Restore cached answer for previous question
+    const prevField = QUESTIONS.getFieldByIndex(currentQuestion);
+    const cachedValue = getCachedAnswer(prevField);
+    if (cachedValue && textareas[prevField]) {
+        textareas[prevField].value = cachedValue;
+        // Update character count
+        const counter = document.getElementById(`${prevField}Count`);
+        if (counter) {
+            counter.textContent = `${cachedValue.length} characters`;
+        }
+    }
+    
     updateProgress();
     window.scrollTo(0, 0);
 }
@@ -282,21 +344,21 @@ async function getAISuggestion(questionNum) {
     const btn = document.getElementById('aiBtn' + questionNum);
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="loading"></span> ' + FEEDBACK_CONFIG.TEXT.aiButtonLoading;
+    btn.innerHTML = '<span class="loading"></span> Analyzing...';
 
-    const fields = Object.keys(FEEDBACK_CONFIG.FORM_SETTINGS.QUESTIONS);
-    const field = fields[questionNum - 1];
+    const field = QUESTIONS.getFieldByIndex(questionNum);
+    const question = QUESTIONS.DEFINITIONS[field];
     const response = textareas[field].value;
 
-    if (response.trim().length < FEEDBACK_CONFIG.FORM_SETTINGS.MIN_CHARS_FOR_AI) {
-        alert(FEEDBACK_CONFIG.ERRORS.aiMinChars);
+    if (response.trim().length < QUESTIONS.MIN_CHARS_FOR_AI) {
+        alert('Please write at least a sentence before asking for AI help');
         btn.innerHTML = originalText;
         btn.disabled = false;
         return;
     }
 
     try {
-        const suggestion = await getClaudeSuggestion(field, response);
+        const suggestion = await getClaudeSuggestion(question, response);
         displaySuggestion(questionNum, suggestion);
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -304,20 +366,15 @@ async function getAISuggestion(questionNum) {
         console.error('AI error:', error);
         btn.innerHTML = originalText;
         btn.disabled = false;
-        alert(FEEDBACK_CONFIG.ERRORS.aiError);
+        alert('Could not get AI suggestions. Please continue with your response.');
     }
 }
 
 /**
  * Call Claude API for suggestion
  */
-async function getClaudeSuggestion(field, response) {
-    const prompts = {
-        accomplishments: `The user wrote: "${response}"\n\nThis is for their weekly accomplishments. Provide 2-3 specific suggestions to make this more impactful: add metrics/data, explain the impact/outcome, or clarify what was achieved. Be constructive and encouraging.`,
-        blockers: `The user wrote: "${response}"\n\nThis describes their blockers/challenges. Provide 2-3 specific suggestions: make the blocker more clear, specify what help they need, or explain the impact. Be supportive and solution-focused.`,
-        morale: `The user wrote: "${response}"\n\nThis is about team morale. Provide 2-3 specific suggestions: add concrete examples, explain what's driving the energy (positive or negative), or clarify team sentiment. Be empathetic.`,
-        ideas: `The user wrote: "${response}"\n\nThis is a bright idea. Provide 2-3 specific suggestions: elaborate on the potential impact, explain implementation approach, or clarify the opportunity. Be encouraging of innovation.`
-    };
+async function getClaudeSuggestion(question, response) {
+    const prompt = question.aiPrompt(response);
 
     const headers = {
         'Content-Type': 'application/json',
@@ -336,7 +393,7 @@ async function getClaudeSuggestion(field, response) {
             max_tokens: FEEDBACK_CONFIG.CLAUDE_MAX_TOKENS,
             messages: [{
                 role: 'user',
-                content: prompts[field]
+                content: prompt
             }]
         })
     });
@@ -353,7 +410,7 @@ function displaySuggestion(questionNum, suggestion) {
     suggestionDiv.innerHTML = `
         <div class="ai-suggestion">
             <div class="ai-suggestion-header">
-                ${FEEDBACK_CONFIG.TEXT.aiSuggestionHeader}
+                🤖 Claude's Suggestions
             </div>
             <div class="ai-suggestion-content">
                 ${suggestion}
@@ -389,7 +446,7 @@ async function handleFormSubmit(e) {
     };
     
     // Add all question responses
-    Object.keys(FEEDBACK_CONFIG.FORM_SETTINGS.QUESTIONS).forEach(field => {
+    QUESTIONS.getOrder().forEach(field => {
         formData[field] = textareas[field].value;
     });
 
@@ -397,7 +454,7 @@ async function handleFormSubmit(e) {
         await submitToGoogleSheets(formData);
         
         // Hide form, show success
-        const totalQuestions = FEEDBACK_CONFIG.FORM_SETTINGS.TOTAL_QUESTIONS;
+        const totalQuestions = QUESTIONS.TOTAL;
         document.getElementById('question' + totalQuestions).classList.remove('active');
         document.getElementById('successScreen').style.display = 'block';
         document.getElementById('progressBar').style.width = '100%';
@@ -408,8 +465,8 @@ async function handleFormSubmit(e) {
         }, FEEDBACK_CONFIG.FORM_SETTINGS.AUTO_LOGOUT_DELAY);
     } catch (error) {
         console.error('Submission error:', error);
-        alert(FEEDBACK_CONFIG.ERRORS.submissionError);
-        submitBtn.innerHTML = FEEDBACK_CONFIG.TEXT.submitButtonText;
+        alert('Could not submit feedback. Please try again or contact your manager.');
+        submitBtn.innerHTML = 'Submit Feedback ✓';
         submitBtn.disabled = false;
     }
 }
@@ -441,3 +498,7 @@ window.signOut = signOut;
 window.nextQuestion = nextQuestion;
 window.prevQuestion = prevQuestion;
 window.getAISuggestion = getAISuggestion;
+
+// Expose answer cache for use in dynamic question generation
+window.getAnswerCache = () => answerCache;
+window.getCachedAnswer = getCachedAnswer;
