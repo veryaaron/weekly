@@ -22,7 +22,7 @@ const CONFIG = {
     
     // Google Apps Script URL
     // This is where form submissions are sent
-    GOOGLE_SCRIPT_URL: 'https://script.google.com/a/macros/kubapay.com/s/AKfycbwT3ch8qlftL0rOz6ZwvzA_U8GF44JM-YqLwO1HHxwWrMImumlqSKDARNRwnDVqT_BT/exec',
+    GOOGLE_SCRIPT_URL: 'https://script.google.com/a/macros/kubapay.com/s/AKfycbyE1y7fwuibvHZy78DBu7b3SNvfXVgY5nNyKRRDV3N20ZA2l_XFZ-gpGZfkqCLYaAXdcQ/exec',
     
     // Anthropic API Settings (Optional - for AI suggestions)
     // Leave blank to use the public API (has rate limits)
