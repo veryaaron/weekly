@@ -202,29 +202,33 @@ function handleCredentialResponse(response) {
     document.getElementById('userEmail').textContent = currentUserData.email;
     document.getElementById('userAvatar').src = currentUserData.picture;
     
-    // Set dynamic hint for accomplishments question AFTER form is visible
-    const accomplishmentsHint = document.querySelector('#question1 .question-hint');
-    console.log('Setting dynamic hint...');
-    console.log('Hint element found:', !!accomplishmentsHint);
-    console.log('QUESTIONS available:', !!QUESTIONS);
-    console.log('User data:', currentUserData);
-    
-    if (accomplishmentsHint && QUESTIONS && QUESTIONS.DEFINITIONS) {
-        const question = QUESTIONS.DEFINITIONS.accomplishments;
-        if (question && question.generateHint) {
-            const hintText = question.generateHint(currentUserData, answerCache);
-            console.log('Generated hint:', hintText);
-            accomplishmentsHint.textContent = hintText;
-        } else {
-            console.error('Question or generateHint function not found');
-        }
-    } else {
-        console.error('Could not find accomplishments hint element or QUESTIONS not loaded');
-    }
+    // Set all dynamic hints
+    updateQuestionHints();
     
     // Reset to first question
     currentQuestion = 1;
     updateProgress();
+}
+
+/**
+ * Update all question hints with dynamic content
+ */
+function updateQuestionHints() {
+    // Update hints for all questions except AI follow-up (which is set dynamically)
+    const questionsToUpdate = ['accomplishments', 'blockers', 'priorities'];
+    
+    questionsToUpdate.forEach((fieldName, index) => {
+        const questionNum = index + 1;
+        const hintElement = document.querySelector(`#question${questionNum} .question-hint`);
+        
+        if (hintElement && QUESTIONS && QUESTIONS.DEFINITIONS) {
+            const question = QUESTIONS.DEFINITIONS[fieldName];
+            if (question && question.generateHint) {
+                const hintText = question.generateHint(currentUserData, answerCache);
+                hintElement.textContent = hintText;
+            }
+        }
+    });
 }
 
 /**
@@ -251,10 +255,8 @@ function signOut() {
     document.getElementById('authError').innerHTML = '';
     document.getElementById('feedbackForm').reset();
     
-    // Reset all suggestions
-    for (let i = 1; i <= QUESTIONS.TOTAL; i++) {
-        document.getElementById('aiSuggestion' + i).innerHTML = '';
-    }
+    // Clear answer cache
+    Object.keys(answerCache).forEach(key => delete answerCache[key]);
     
     // Reset to first question
     document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
@@ -293,7 +295,7 @@ function updateProgress() {
 /**
  * Navigate to next question
  */
-function nextQuestion(current) {
+async function nextQuestion(current) {
     // Validate current question
     const field = QUESTIONS.getFieldByIndex(current);
     const question = QUESTIONS.DEFINITIONS[field];
@@ -310,10 +312,48 @@ function nextQuestion(current) {
     console.log('Moving from question', current, 'to', current + 1);
     console.log('Current cache:', answerCache);
 
+    // If moving from question 3, generate AI summary and follow-up
+    if (current === 3) {
+        const generateBtn = document.getElementById('generateAIBtn');
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<span class="loading"></span> Analyzing your answers...';
+        
+        try {
+            // Generate AI summary and follow-up question
+            const aiResponse = await window.generateAIFollowUpQuestion(currentUserData, answerCache);
+            console.log('AI Response:', aiResponse);
+            
+            // Store both summary and question
+            answerCache.aiSummary = aiResponse.summary;
+            answerCache.aiQuestion = aiResponse.question;
+            
+            // Update question 4 hint with the AI-generated question
+            document.getElementById('aiQuestionHint').textContent = aiResponse.question;
+            
+            // Optionally show the summary above the question
+            // You could add a summary display element if desired
+            
+            generateBtn.innerHTML = 'Generate Follow-up Question →';
+            generateBtn.disabled = false;
+        } catch (error) {
+            console.error('Error generating AI question:', error);
+            const firstName = currentUserData.firstName || currentUserData.name.split(' ')[0];
+            document.getElementById('aiQuestionHint').textContent = `Is there anything else important you'd like to discuss ${firstName}?`;
+            answerCache.aiSummary = 'Thank you for your updates.';
+            answerCache.aiQuestion = `Is there anything else important you'd like to discuss ${firstName}?`;
+            generateBtn.innerHTML = 'Generate Follow-up Question →';
+            generateBtn.disabled = false;
+        }
+    }
+
     // Hide current, show next
     document.getElementById('question' + current).classList.remove('active');
     currentQuestion = current + 1;
     document.getElementById('question' + currentQuestion).classList.add('active');
+    
+    // Update hints for dynamic questions
+    updateQuestionHints();
+    
     updateProgress();
     window.scrollTo(0, 0);
 }
@@ -349,89 +389,6 @@ function prevQuestion(current) {
 // ========================================
 // AI SUGGESTIONS
 // ========================================
-
-/**
- * Get AI suggestion for a specific question
- */
-async function getAISuggestion(questionNum) {
-    const btn = document.getElementById('aiBtn' + questionNum);
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loading"></span> Analyzing...';
-
-    const field = QUESTIONS.getFieldByIndex(questionNum);
-    const question = QUESTIONS.DEFINITIONS[field];
-    const response = textareas[field].value;
-
-    if (response.trim().length < QUESTIONS.MIN_CHARS_FOR_AI) {
-        alert('Please write at least a sentence before asking for AI help');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        return;
-    }
-
-    try {
-        const suggestion = await getClaudeSuggestion(question, response);
-        displaySuggestion(questionNum, suggestion);
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    } catch (error) {
-        console.error('AI error:', error);
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        alert('Could not get AI suggestions. Please continue with your response.');
-    }
-}
-
-/**
- * Call Claude API for suggestion
- */
-async function getClaudeSuggestion(question, response) {
-    const prompt = question.aiPrompt(response);
-
-    const headers = {
-        'Content-Type': 'application/json',
-    };
-    
-    // Add API key if configured
-    if (FEEDBACK_CONFIG.ANTHROPIC_API_KEY) {
-        headers['x-api-key'] = FEEDBACK_CONFIG.ANTHROPIC_API_KEY;
-    }
-
-    const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({
-            model: FEEDBACK_CONFIG.CLAUDE_MODEL,
-            max_tokens: FEEDBACK_CONFIG.CLAUDE_MAX_TOKENS,
-            messages: [{
-                role: 'user',
-                content: prompt
-            }]
-        })
-    });
-
-    const data = await apiResponse.json();
-    return data.content[0].text;
-}
-
-/**
- * Display AI suggestion in the UI
- */
-function displaySuggestion(questionNum, suggestion) {
-    const suggestionDiv = document.getElementById('aiSuggestion' + questionNum);
-    suggestionDiv.innerHTML = `
-        <div class="ai-suggestion">
-            <div class="ai-suggestion-header">
-                🤖 Claude's Suggestions
-            </div>
-            <div class="ai-suggestion-content">
-                ${suggestion}
-            </div>
-        </div>
-    `;
-}
-
 // ========================================
 // FORM SUBMISSION
 // ========================================
@@ -455,20 +412,25 @@ async function handleFormSubmit(e) {
     const formData = {
         timestamp: new Date().toISOString(),
         name: currentUserData.name,
-        email: currentUserData.email
+        email: currentUserData.email,
+        // The three main answers
+        accomplishments: answerCache.accomplishments || textareas.accomplishments.value,
+        blockers: answerCache.blockers || textareas.blockers.value,
+        priorities: answerCache.priorities || textareas.priorities.value,
+        // AI-generated summary and question
+        aiSummary: answerCache.aiSummary || '',
+        aiQuestion: answerCache.aiQuestion || '',
+        // Answer to the AI-generated question
+        aiAnswer: textareas.aiGeneratedQuestion.value
     };
     
-    // Add all question responses
-    QUESTIONS.getOrder().forEach(field => {
-        formData[field] = textareas[field].value;
-    });
+    console.log('Submitting form data:', formData);
 
     try {
         await submitToGoogleSheets(formData);
         
         // Hide form, show success
-        const totalQuestions = QUESTIONS.TOTAL;
-        document.getElementById('question' + totalQuestions).classList.remove('active');
+        document.getElementById('question4').classList.remove('active');
         document.getElementById('successScreen').style.display = 'block';
         document.getElementById('progressBar').style.width = '100%';
 
@@ -510,7 +472,6 @@ window.handleCredentialResponse = handleCredentialResponse;
 window.signOut = signOut;
 window.nextQuestion = nextQuestion;
 window.prevQuestion = prevQuestion;
-window.getAISuggestion = getAISuggestion;
 
 // Expose answer cache for use in dynamic question generation
 window.getAnswerCache = () => answerCache;

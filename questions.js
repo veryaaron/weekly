@@ -6,80 +6,73 @@
  */
 
 const QUESTIONS = {
-    // Total number of questions
+    // Total number of questions (3 manual + 1 AI-generated)
     TOTAL: 4,
     
-    // Minimum characters before AI suggestions are enabled
-    MIN_CHARS_FOR_AI: 10,
+    // Minimum characters before moving to next question
+    MIN_CHARS_TO_CONTINUE: 10,
     
     // Question definitions
     DEFINITIONS: {
         accomplishments: {
             id: 'accomplishments',
+            questionNumber: 1,
             required: true,
             label: 'Key Accomplishments This Week',
+            showAIButton: false, // No AI button on this question
             
-            // Dynamic hint generator - called when user signs in
+            // Dynamic hint generator
             generateHint: function(userData, cachedAnswers) {
                 const greeting = getTimeBasedGreeting();
                 const firstName = userData.firstName || userData.name.split(' ')[0];
                 
                 return `Good ${greeting} ${firstName}, what significant progress did you or your team make this week? Think about completed projects, milestones reached, sales achieved, problems solved, or goals achieved. Aim for three pieces of news.`;
-            },
-            
-            // AI prompt for suggestions
-            aiPrompt: function(userResponse) {
-                return `The user wrote: "${userResponse}"\n\nThis is for their weekly accomplishments. Provide 2-3 specific suggestions to make this more impactful: add metrics/data, explain the impact/outcome, or clarify what was achieved. Be constructive and encouraging.`;
             }
         },
         
         blockers: {
             id: 'blockers',
+            questionNumber: 2,
             required: true,
             label: 'Blockers & Challenges',
+            showAIButton: false, // No AI button on this question
             
-            // Static hint (can be dynamic if needed)
             generateHint: function(userData, cachedAnswers) {
-                return 'What obstacles are preventing progress? What support or resources do you need? Be specific about what\'s blocking you and what would help resolve it.';
-            },
-            
-            aiPrompt: function(userResponse) {
-                return `The user wrote: "${userResponse}"\n\nThis describes their blockers/challenges. Provide 2-3 specific suggestions: make the blocker more clear, specify what help they need, or explain the impact. Be supportive and solution-focused.`;
+                const firstName = userData.firstName || userData.name.split(' ')[0];
+                return `Great, now we've discussed achievements ${firstName}, what is currently blocking your path? What support or resources do you need?`;
             }
         },
         
-        morale: {
-            id: 'morale',
+        priorities: {
+            id: 'priorities',
+            questionNumber: 3,
             required: true,
-            label: 'Team Morale & Energy',
+            label: 'Priorities',
+            showAIButton: false, // No AI button on this question
             
             generateHint: function(userData, cachedAnswers) {
-                return 'How is your team feeling right now? What\'s driving energy levels? Any concerns or positive momentum? Include specific examples or observations.';
-            },
-            
-            aiPrompt: function(userResponse) {
-                return `The user wrote: "${userResponse}"\n\nThis is about team morale. Provide 2-3 specific suggestions: add concrete examples, explain what\'s driving the energy (positive or negative), or clarify team sentiment. Be empathetic.`;
+                const firstName = userData.firstName || userData.name.split(' ')[0];
+                return `What are your current priorities ${firstName} and are you happy this is definitely the right priority list for the business or would you like to discuss them?`;
             }
         },
         
-        ideas: {
-            id: 'ideas',
-            required: false,
-            label: 'Bright Ideas',
+        aiFollowUp: {
+            id: 'aiFollowUp',
+            questionNumber: 4,
+            required: true,
+            label: '', // Will be dynamically set by AI
+            showAIButton: false, // No AI button on AI-generated question
             
             generateHint: function(userData, cachedAnswers) {
-                return 'Any innovative suggestions or opportunities you\'ve identified? What\'s the potential impact? How might it be implemented? (Optional - skip if you don\'t have any this week)';
-            },
-            
-            aiPrompt: function(userResponse) {
-                return `The user wrote: "${userResponse}"\n\nThis is a bright idea. Provide 2-3 specific suggestions: elaborate on the potential impact, explain implementation approach, or clarify the opportunity. Be encouraging of innovation.`;
+                // This will be replaced with AI-generated question
+                return 'Loading your personalized follow-up question...';
             }
         }
     },
     
     // Get question order (array of field names)
     getOrder: function() {
-        return ['accomplishments', 'blockers', 'morale', 'ideas'];
+        return ['accomplishments', 'blockers', 'priorities', 'aiFollowUp'];
     },
     
     // Get question by index (1-based)
@@ -114,5 +107,78 @@ function getTimeBasedGreeting() {
     }
 }
 
+/**
+ * Generate AI summary and follow-up question based on first 3 answers
+ */
+async function generateAIFollowUpQuestion(userData, cachedAnswers) {
+    const firstName = userData.firstName || userData.name.split(' ')[0];
+    
+    const prompt = `I am conducting a weekly check-in with ${firstName}. They have answered these three questions:
+
+Question 1 - Key Accomplishments This Week:
+"${cachedAnswers.accomplishments || 'No answer provided'}"
+
+Question 2 - Blockers & Challenges (what is currently blocking your path, what support or resources do you need):
+"${cachedAnswers.blockers || 'No answer provided'}"
+
+Question 3 - Priorities (current priorities and if they're happy this is the right priority list for the business):
+"${cachedAnswers.priorities || 'No answer provided'}"
+
+Please:
+1. Summarize the answers given to these three questions in 2-3 sentences
+2. Ask ONE question that you think is pertinent to the answers given
+
+Format your response exactly as:
+SUMMARY: [your 2-3 sentence summary]
+QUESTION: [your single pertinent question]`;
+
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        
+        // Add API key if configured
+        if (window.FEEDBACK_CONFIG && window.FEEDBACK_CONFIG.ANTHROPIC_API_KEY) {
+            headers['x-api-key'] = window.FEEDBACK_CONFIG.ANTHROPIC_API_KEY;
+        }
+
+        const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+                model: window.FEEDBACK_CONFIG?.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+                max_tokens: 500,
+                messages: [{
+                    role: 'user',
+                    content: prompt
+                }]
+            })
+        });
+
+        const data = await apiResponse.json();
+        const response = data.content[0].text.trim();
+        
+        console.log('AI Response:', response);
+        
+        // Parse the response to extract summary and question
+        const summaryMatch = response.match(/SUMMARY:\s*(.+?)(?=QUESTION:|$)/s);
+        const questionMatch = response.match(/QUESTION:\s*(.+?)$/s);
+        
+        return {
+            summary: summaryMatch ? summaryMatch[1].trim() : '',
+            question: questionMatch ? questionMatch[1].trim() : 'What else would you like to share about this week?'
+        };
+    } catch (error) {
+        console.error('Error generating AI question:', error);
+        // Fallback
+        return {
+            summary: 'Thank you for sharing your updates this week.',
+            question: 'Is there anything else important you\'d like to discuss?'
+        };
+    }
+}
+
 // Make available globally
 window.QUESTIONS = QUESTIONS;
+window.generateAIFollowUpQuestion = generateAIFollowUpQuestion;
+

@@ -67,55 +67,49 @@
             <!-- Form -->
             <form id="feedbackForm">
                 <div class="question-container">
-                    <!-- Question 1: Accomplishments -->
+                    <!-- Question 1: Accomplishments (no AI button) -->
                     <div class="question active" id="question1">
                         <label class="question-label">Key Accomplishments This Week</label>
                         <span class="question-hint">Loading...</span>
                         <textarea id="accomplishments" required></textarea>
                         <div class="character-count" id="accomplishmentsCount">0 characters</div>
-                        <button type="button" class="btn-ai" id="aiBtn1" onclick="getAISuggestion(1)">✨ Get AI Help to Improve This</button>
-                        <div id="aiSuggestion1"></div>
                         <div class="btn-group">
                             <button type="button" class="btn-primary" onclick="nextQuestion(1)">Continue →</button>
                         </div>
                     </div>
 
-                    <!-- Question 2: Blockers -->
+                    <!-- Question 2: Blockers (no AI button) -->
                     <div class="question" id="question2">
                         <label class="question-label">Blockers & Challenges</label>
-                        <span class="question-hint">What obstacles are preventing progress? What support or resources do you need? Be specific about what's blocking you and what would help resolve it.</span>
+                        <span class="question-hint">Loading...</span>
                         <textarea id="blockers" required></textarea>
                         <div class="character-count" id="blockersCount">0 characters</div>
-                        <button type="button" class="btn-ai" id="aiBtn2" onclick="getAISuggestion(2)">✨ Get AI Help to Improve This</button>
-                        <div id="aiSuggestion2"></div>
                         <div class="btn-group">
                             <button type="button" class="btn-secondary" onclick="prevQuestion(2)">← Back</button>
                             <button type="button" class="btn-primary" onclick="nextQuestion(2)">Continue →</button>
                         </div>
                     </div>
 
-                    <!-- Question 3: Morale -->
+                    <!-- Question 3: Priorities (no AI button) -->
                     <div class="question" id="question3">
-                        <label class="question-label">Team Morale & Energy</label>
-                        <span class="question-hint">How is your team feeling right now? What's driving energy levels? Any concerns or positive momentum? Include specific examples or observations.</span>
-                        <textarea id="morale" required></textarea>
-                        <div class="character-count" id="moraleCount">0 characters</div>
-                        <button type="button" class="btn-ai" id="aiBtn3" onclick="getAISuggestion(3)">✨ Get AI Help to Improve This</button>
-                        <div id="aiSuggestion3"></div>
+                        <label class="question-label">Priorities</label>
+                        <span class="question-hint">Loading...</span>
+                        <textarea id="priorities" required></textarea>
+                        <div class="character-count" id="prioritiesCount">0 characters</div>
                         <div class="btn-group">
                             <button type="button" class="btn-secondary" onclick="prevQuestion(3)">← Back</button>
-                            <button type="button" class="btn-primary" onclick="nextQuestion(3)">Continue →</button>
+                            <button type="button" class="btn-primary" onclick="nextQuestion(3)" id="generateAIBtn">
+                                Generate Follow-up Question →
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Question 4: Ideas -->
+                    <!-- Question 4: AI-Generated Follow-up -->
                     <div class="question" id="question4">
-                        <label class="question-label">Bright Ideas</label>
-                        <span class="question-hint">Any innovative suggestions or opportunities you've identified? What's the potential impact? How might it be implemented? (Optional - skip if you don't have any this week)</span>
-                        <textarea id="ideas"></textarea>
-                        <div class="character-count" id="ideasCount">0 characters</div>
-                        <button type="button" class="btn-ai" id="aiBtn4" onclick="getAISuggestion(4)">✨ Get AI Help to Improve This</button>
-                        <div id="aiSuggestion4"></div>
+                        <label class="question-label" id="aiQuestionLabel">Follow-up Question</label>
+                        <span class="question-hint" id="aiQuestionHint">Loading your personalized question...</span>
+                        <textarea id="aiFollowUp" required></textarea>
+                        <div class="character-count" id="aiFollowUpCount">0 characters</div>
                         <div class="btn-group">
                             <button type="button" class="btn-secondary" onclick="prevQuestion(4)">← Back</button>
                             <button type="submit" class="btn-primary" id="submitBtn">Submit Feedback ✓</button>
