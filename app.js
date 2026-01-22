@@ -42,6 +42,10 @@ function getCachedAnswer(questionField) {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, checking dependencies...');
+    console.log('window.FEEDBACK_CONFIG:', typeof window.FEEDBACK_CONFIG);
+    console.log('window.QUESTIONS:', typeof window.QUESTIONS);
+    
     // Verify config and questions loaded
     if (!window.FEEDBACK_CONFIG) {
         console.error('FEEDBACK_CONFIG not loaded!');
@@ -55,9 +59,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (!window.QUESTIONS) {
         console.error('QUESTIONS not loaded!');
+        console.error('Check if questions.js is accessible at: ' + window.location.origin + '/questions.js');
         document.getElementById('authError').innerHTML = `
             <div class="error-message">
-                Questions not loaded. Please refresh the page.
+                Questions not loaded. Please refresh the page.<br>
+                <small>Check browser console (F12) for details.</small>
             </div>
         `;
         return;
@@ -419,6 +425,7 @@ async function handleFormSubmit(e) {
 
     // Collect form data
     const formData = {
+        action: 'submit', // Tell Apps Script this is a submission
         timestamp: new Date().toISOString(),
         name: currentUserData.name,
         email: currentUserData.email,
@@ -468,22 +475,26 @@ async function submitToGoogleSheets(data) {
     try {
         const response = await fetch(FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Required for Google Apps Script
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(data)
         });
         
-        console.log('Fetch completed (no-cors mode - cannot read response)');
+        console.log('Response status:', response.status);
         
-        // Longer delay to ensure submission completes
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        const result = await response.json();
+        console.log('Response data:', result);
         
-        console.log('Submission delay completed');
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Submission failed');
+        }
+        
+        console.log('Submission successful!');
+        
     } catch (error) {
         console.error('Fetch error:', error);
-        throw new Error('Network error: ' + error.message);
+        throw new Error('Submission error: ' + error.message);
     }
 }
 

@@ -108,99 +108,60 @@ function getTimeBasedGreeting() {
 }
 
 /**
- * Generate AI summary and follow-up question based on first 3 answers
+ * Generate AI summary and follow-up question via Google Apps Script
+ * The API key is securely stored in Google Apps Script properties
  */
 async function generateAIFollowUpQuestion(userData, cachedAnswers) {
     const firstName = userData.firstName || userData.name.split(' ')[0];
     
-    const prompt = `I am conducting a weekly check-in with ${firstName}. They have answered these three questions:
-
-Question 1 - Key Accomplishments This Week:
-"${cachedAnswers.accomplishments || 'No answer provided'}"
-
-Question 2 - Blockers & Challenges (what is currently blocking your path, what support or resources do you need):
-"${cachedAnswers.blockers || 'No answer provided'}"
-
-Question 3 - Priorities (current priorities and if they're happy this is the right priority list for the business):
-"${cachedAnswers.priorities || 'No answer provided'}"
-
-Please:
-1. Summarize the answers given to these three questions in 2-3 sentences
-2. Ask ONE question that you think is pertinent to the answers given
-
-Format your response exactly as:
-SUMMARY: [your 2-3 sentence summary]
-QUESTION: [your single pertinent question]`;
-
+    console.log('Generating AI question via Google Apps Script...');
+    console.log('User:', firstName);
+    
     try {
-        console.log('Generating AI question for:', firstName);
-        console.log('Accomplishments:', cachedAnswers.accomplishments?.substring(0, 50) + '...');
-        console.log('Blockers:', cachedAnswers.blockers?.substring(0, 50) + '...');
-        console.log('Priorities:', cachedAnswers.priorities?.substring(0, 50) + '...');
+        const scriptUrl = window.FEEDBACK_CONFIG?.GOOGLE_SCRIPT_URL;
         
-        const headers = {
-            'Content-Type': 'application/json',
-        };
-        
-        // Add API key if configured
-        if (window.FEEDBACK_CONFIG && window.FEEDBACK_CONFIG.ANTHROPIC_API_KEY) {
-            headers['x-api-key'] = window.FEEDBACK_CONFIG.ANTHROPIC_API_KEY;
-            console.log('Using configured API key');
-        } else {
-            console.log('No API key configured, using public endpoint');
+        if (!scriptUrl) {
+            throw new Error('Google Script URL not configured');
         }
-
-        console.log('Calling Anthropic API...');
-        const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        
+        console.log('Calling Apps Script at:', scriptUrl);
+        
+        const response = await fetch(scriptUrl, {
             method: 'POST',
-            headers: headers,
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
-                model: window.FEEDBACK_CONFIG?.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
-                max_tokens: 500,
-                messages: [{
-                    role: 'user',
-                    content: prompt
-                }]
+                action: 'generate',
+                firstName: firstName,
+                accomplishments: cachedAnswers.accomplishments || '',
+                blockers: cachedAnswers.blockers || '',
+                priorities: cachedAnswers.priorities || ''
             })
         });
-
-        console.log('API Response status:', apiResponse.status);
         
-        if (!apiResponse.ok) {
-            const errorText = await apiResponse.text();
-            console.error('API Error response:', errorText);
-            throw new Error(`API returned ${apiResponse.status}: ${errorText}`);
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.status === 'success') {
+            return {
+                summary: data.summary || '',
+                question: data.question || 'What else would you like to share about this week?'
+            };
+        } else {
+            throw new Error(data.message || 'Unknown error from server');
         }
-
-        const data = await apiResponse.json();
-        console.log('API Response data:', data);
         
-        const response = data.content[0].text.trim();
-        
-        console.log('AI Generated text:', response);
-        
-        // Parse the response to extract summary and question
-        const summaryMatch = response.match(/SUMMARY:\s*(.+?)(?=QUESTION:|$)/s);
-        const questionMatch = response.match(/QUESTION:\s*(.+?)$/s);
-        
-        const result = {
-            summary: summaryMatch ? summaryMatch[1].trim() : '',
-            question: questionMatch ? questionMatch[1].trim() : 'What else would you like to share about this week?'
-        };
-        
-        console.log('Parsed result:', result);
-        
-        return result;
     } catch (error) {
-        console.error('Error in generateAIFollowUpQuestion:', error);
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
+        console.error('Error generating AI question:', error);
+        console.error('Error details:', error.message);
         
         // Fallback
         return {
             summary: 'Thank you for sharing your updates this week.',
-            question: 'Is there anything else important you\'d like to discuss?'
+            question: `Is there anything else important you'd like to discuss, ${firstName}?`
         };
     }
 }
