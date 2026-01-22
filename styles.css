@@ -2,8 +2,77 @@
  * STYLES.CSS
  * ==========
  * 
- * All styling for the Weekly Feedback Form
+ * Kuba Brand Styling for Weekly Feedback Form
+ * Based on Kuba Brand Guide - Documents and Presentations
+ * 
+ * Typography: Ubuntu (Primary), Calibri (Fallback)
+ * Colors: Navy #272251, Yellow #ffd618, Coral #e9426d, Green #00a870
  */
+
+/* ========================================
+   CSS VARIABLES - KUBA BRAND COLORS
+   ======================================== */
+
+:root {
+    /* Kuba Core Colors */
+    --kuba-navy: #272251;
+    --kuba-yellow: #ffd618;
+    
+    /* Kuba Complementary Colors */
+    --kuba-coral: #e9426d;
+    --kuba-green: #00a870;
+    
+    /* Kuba Base Colors */
+    --kuba-white: #ffffff;
+    --kuba-black: #000000;
+    
+    /* Light Mode Theme */
+    --bg-primary: #f5f5f7;
+    --bg-card: #ffffff;
+    --text-primary: var(--kuba-navy);
+    --text-secondary: #5a5a6e;
+    --border-color: #e0e0e5;
+    --input-bg: #ffffff;
+    --input-border: #d0d0d8;
+    --shadow-color: rgba(39, 34, 81, 0.08);
+    
+    /* Button Colors - Light Mode */
+    --btn-primary-bg: var(--kuba-navy);
+    --btn-primary-text: var(--kuba-white);
+    --btn-secondary-bg: transparent;
+    --btn-secondary-text: var(--kuba-navy);
+    --btn-secondary-border: var(--kuba-navy);
+    
+    /* Accent & Progress */
+    --accent-color: var(--kuba-yellow);
+    --progress-bg: #e0e0e5;
+}
+
+/* ========================================
+   DARK MODE (System Preference)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #1a1635;
+        --bg-card: var(--kuba-navy);
+        --text-primary: var(--kuba-white);
+        --text-secondary: #a0a0b8;
+        --border-color: #3a3560;
+        --input-bg: #201a45;
+        --input-border: #4a4575;
+        --shadow-color: rgba(0, 0, 0, 0.25);
+        
+        /* Button Colors - Dark Mode */
+        --btn-primary-bg: var(--kuba-yellow);
+        --btn-primary-text: var(--kuba-navy);
+        --btn-secondary-bg: transparent;
+        --btn-secondary-text: var(--kuba-yellow);
+        --btn-secondary-border: var(--kuba-yellow);
+        
+        --progress-bg: #3a3560;
+    }
+}
 
 /* ========================================
    CSS RESET & BASE STYLES
@@ -15,38 +84,23 @@
     box-sizing: border-box;
 }
 
-/* ========================================
-   CSS VARIABLES (THEME)
-   ======================================== */
-
-:root {
-    --primary: #0F172A;
-    --accent: #3B82F6;
-    --bg: #F8FAFC;
-    --card: #FFFFFF;
-    --text: #1E293B;
-    --text-light: #64748B;
-    --border: #E2E8F0;
-    --success: #10B981;
-    --warning: #F59E0B;
-    --error: #EF4444;
-}
-
-/* ========================================
-   BODY & CONTAINER
-   ======================================== */
-
 body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    font-family: 'Ubuntu', 'Calibri', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
-    padding: 2rem 1rem;
+    padding: 20px;
+    padding-bottom: 100px; /* Space for fixed sign-out */
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ========================================
+   LAYOUT CONTAINER
+   ======================================== */
+
 .container {
-    max-width: 800px;
+    max-width: 600px;
     margin: 0 auto;
 }
 
@@ -56,83 +110,68 @@ body {
 
 .header {
     text-align: center;
-    margin-bottom: 3rem;
-    animation: fadeInDown 0.6s ease;
+    margin-bottom: 30px;
 }
 
 .header h1 {
-    font-family: 'Space Mono', monospace;
-    font-size: 2.5rem;
+    font-family: 'Ubuntu', 'Calibri', sans-serif;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: var(--primary);
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-bottom: 8px;
 }
 
 .header p {
-    color: var(--text-light);
-    font-size: 1.1rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
 }
 
 /* ========================================
-   AUTHENTICATION CARD
+   CARDS
    ======================================== */
 
-.auth-card {
-    background: var(--card);
+.auth-card,
+.form-card {
+    background: var(--bg-card);
     border-radius: 16px;
-    padding: 3rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 30px;
+    box-shadow: 0 4px 24px var(--shadow-color);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Kuba Kurve decoration */
+.auth-card::before,
+.form-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: var(--kuba-yellow);
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+.auth-card {
     text-align: center;
-    animation: fadeInUp 0.6s ease;
 }
 
 .auth-card h2 {
-    margin-bottom: 1rem;
-    color: var(--primary);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-primary);
 }
 
-.auth-card p {
-    margin-bottom: 2rem;
-    color: var(--text-light);
+.auth-card > p {
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    font-size: 0.95rem;
 }
-
-.google-signin-container {
-    display: flex;
-    justify-content: center;
-    margin: 2rem 0;
-}
-
-/* ========================================
-   ERROR MESSAGES
-   ======================================== */
-
-.error-message {
-    background: #FEE2E2;
-    border-left: 4px solid var(--error);
-    padding: 1rem;
-    border-radius: 8px;
-    margin-top: 1.5rem;
-    color: #991B1B;
-    text-align: left;
-    white-space: pre-line;
-}
-
-.error-message strong {
-    display: block;
-    margin-bottom: 0.5rem;
-}
-
-/* ========================================
-   FORM CARD
-   ======================================== */
 
 .form-card {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 2.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    animation: fadeInUp 0.6s ease;
     display: none;
 }
 
@@ -141,59 +180,68 @@ body {
 }
 
 /* ========================================
-   USER INFO BAR
+   GOOGLE SIGN-IN
    ======================================== */
 
-.user-info {
-    background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-    padding: 1.25rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
+.google-signin-container {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
 }
 
-.user-info-left {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-}
-
-.user-details {
-    text-align: left;
-}
-
-.user-name {
-    font-weight: 600;
-    color: var(--primary);
-}
-
-.user-email {
-    font-size: 0.85rem;
-    color: var(--text-light);
-}
-
-.btn-signout {
-    background: white;
-    border: 2px solid var(--border);
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
+#signinLoading {
+    color: var(--text-secondary);
     font-size: 0.9rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
+    padding: 20px;
 }
 
-.btn-signout:hover {
-    border-color: var(--error);
-    color: var(--error);
+/* ========================================
+   ERROR MESSAGES
+   ======================================== */
+
+.error-message {
+    background: rgba(233, 66, 109, 0.1);
+    border: 1px solid var(--kuba-coral);
+    color: var(--kuba-coral);
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 15px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* ========================================
+   AUTH HELP SECTION
+   ======================================== */
+
+#authHelp {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+#authHelp p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
+#authHelp button {
+    padding: 10px 24px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: 'Ubuntu', 'Calibri', sans-serif;
+    transition: all 0.2s ease;
+}
+
+#authHelp button:hover {
+    background: var(--border-color);
 }
 
 /* ========================================
@@ -201,26 +249,26 @@ body {
    ======================================== */
 
 .progress-bar {
-    width: 100%;
-    height: 8px;
-    background: var(--border);
-    border-radius: 4px;
-    margin-bottom: 2rem;
+    height: 6px;
+    background: var(--progress-bg);
+    border-radius: 3px;
+    margin-bottom: 30px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent), #2563EB);
-    transition: width 0.3s ease;
+    background: var(--kuba-yellow);
+    border-radius: 3px;
+    transition: width 0.4s ease;
 }
 
 /* ========================================
-   QUESTION CONTAINER
+   QUESTIONS
    ======================================== */
 
 .question-container {
-    min-height: 400px;
+    position: relative;
 }
 
 .question {
@@ -229,84 +277,69 @@ body {
 
 .question.active {
     display: block;
-    animation: fadeIn 0.4s ease;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .question-label {
     display: block;
-    font-weight: 600;
-    color: var(--primary);
-    margin-bottom: 0.75rem;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
 }
 
 .question-hint {
     display: block;
-    color: var(--text-light);
+    color: var(--text-secondary);
     font-size: 0.95rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 20px;
     line-height: 1.6;
 }
 
 /* ========================================
-   FORM INPUTS
+   FORM ELEMENTS
    ======================================== */
 
 textarea {
     width: 100%;
-    padding: 1rem;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
+    min-height: 140px;
+    padding: 16px;
+    border: 2px solid var(--input-border);
+    border-radius: 12px;
+    font-family: 'Ubuntu', 'Calibri', sans-serif;
     font-size: 1rem;
-    color: var(--text);
-    transition: all 0.3s ease;
-    background: var(--bg);
-    min-height: 150px;
     resize: vertical;
+    transition: border-color 0.2s ease, background-color 0.3s ease;
+    background: var(--input-bg);
+    color: var(--text-primary);
 }
 
 textarea:focus {
     outline: none;
-    border-color: var(--accent);
-    background: white;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--kuba-yellow);
+}
+
+textarea::placeholder {
+    color: var(--text-secondary);
 }
 
 .character-count {
     text-align: right;
     font-size: 0.85rem;
-    color: var(--text-light);
-    margin-top: 0.5rem;
-}
-
-/* ========================================
-   AI SUGGESTIONS
-   ======================================== */
-
-.ai-suggestion {
-    margin-top: 1.5rem;
-    padding: 1.25rem;
-    background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-    border-left: 4px solid var(--accent);
-    border-radius: 8px;
-    animation: slideIn 0.4s ease;
-}
-
-.ai-suggestion-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    font-weight: 600;
-    color: var(--accent);
-    font-size: 1rem;
-}
-
-.ai-suggestion-content {
-    color: var(--text);
-    font-size: 0.95rem;
-    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    margin-bottom: 20px;
 }
 
 /* ========================================
@@ -315,68 +348,54 @@ textarea:focus {
 
 .btn-group {
     display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
+    gap: 12px;
+    margin-top: 25px;
 }
 
-button {
-    padding: 0.875rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
+.btn-primary,
+.btn-secondary {
+    flex: 1;
+    padding: 14px 24px;
+    border-radius: 10px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    font-family: 'Ubuntu', 'Calibri', sans-serif;
 }
 
 .btn-primary {
-    background: var(--accent);
-    color: white;
-    flex: 1;
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+    border: 2px solid var(--btn-primary-bg);
 }
 
 .btn-primary:hover {
-    background: #2563EB;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
-    background: var(--border);
+    opacity: 0.5;
     cursor: not-allowed;
     transform: none;
 }
 
 .btn-secondary {
-    background: white;
-    color: var(--text);
-    border: 2px solid var(--border);
-    flex: 0.5;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+    border: 2px solid var(--btn-secondary-border);
 }
 
 .btn-secondary:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+    background: var(--btn-secondary-border);
+    color: var(--btn-primary-text);
 }
 
-.btn-ai {
-    background: var(--primary);
-    color: white;
-    width: 100%;
-    margin-top: 1rem;
-}
-
-.btn-ai:hover {
-    background: #1E293B;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
-}
-
-.btn-ai:disabled {
-    background: var(--border);
-    cursor: not-allowed;
-    transform: none;
+@media (prefers-color-scheme: dark) {
+    .btn-secondary:hover {
+        color: var(--kuba-navy);
+    }
 }
 
 /* ========================================
@@ -385,113 +404,137 @@ button {
 
 .loading {
     display: inline-block;
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
     border-radius: 50%;
+    border-top-color: transparent;
     animation: spin 0.8s linear infinite;
-}
-
-/* ========================================
-   SUCCESS MESSAGE
-   ======================================== */
-
-.success-message {
-    background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
-    border-left: 4px solid var(--success);
-    padding: 2rem;
-    border-radius: 8px;
-    text-align: center;
-    animation: fadeIn 0.5s ease;
-}
-
-.success-message h3 {
-    color: #065F46;
-    margin-bottom: 0.5rem;
-    font-size: 1.5rem;
-}
-
-.success-message p {
-    color: #047857;
-}
-
-/* ========================================
-   ANIMATIONS
-   ======================================== */
-
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    margin-right: 8px;
+    vertical-align: middle;
 }
 
 @keyframes spin {
-    to { 
-        transform: rotate(360deg); 
+    to {
+        transform: rotate(360deg);
     }
 }
 
-@keyframes fadeIn {
-    from { 
-        opacity: 0; 
-    }
-    to { 
-        opacity: 1; 
-    }
+/* ========================================
+   SUCCESS SCREEN
+   ======================================== */
+
+.success-message {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.success-message h3 {
+    font-size: 1.4rem;
+    color: var(--kuba-green);
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.success-message p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* ========================================
+   FIXED SIGN OUT BUTTON (Bottom of Screen)
+   ======================================== */
+
+.signout-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 15px 20px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    transition: background-color 0.3s ease;
+}
+
+.signout-container.active {
+    display: flex;
+}
+
+.btn-signout {
+    padding: 10px 30px;
+    background: transparent;
+    border: 1px solid var(--kuba-coral);
+    color: var(--kuba-coral);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Ubuntu', 'Calibri', sans-serif;
+}
+
+.btn-signout:hover {
+    background: var(--kuba-coral);
+    color: var(--kuba-white);
 }
 
 /* ========================================
    RESPONSIVE DESIGN
    ======================================== */
 
-@media (max-width: 640px) {
-    .header h1 {
-        font-size: 2rem;
+@media (max-width: 480px) {
+    body {
+        padding: 15px;
+        padding-bottom: 90px;
     }
     
-    .form-card, .auth-card {
-        padding: 1.5rem;
+    .header h1 {
+        font-size: 1.5rem;
     }
-
+    
+    .auth-card,
+    .form-card {
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .auth-card::before,
+    .form-card::before {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .question-label {
+        font-size: 1.05rem;
+    }
+    
     .btn-group {
         flex-direction: column;
     }
-
-    .user-info {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-
+    
+    .btn-primary,
     .btn-secondary {
-        flex: 1;
+        width: 100%;
     }
+    
+    textarea {
+        min-height: 120px;
+    }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
 }

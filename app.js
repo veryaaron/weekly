@@ -84,9 +84,101 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup form submission handler
     document.getElementById('feedbackForm').addEventListener('submit', handleFormSubmit);
     
-    // Initialize Google Sign-In manually AFTER config is confirmed loaded
-    initializeGoogleSignIn();
+    // Check for existing session before initializing Google Sign-In
+    checkExistingSession();
 });
+
+/**
+ * Check if user has an existing valid session
+ */
+function checkExistingSession() {
+    try {
+        const savedSession = sessionStorage.getItem('feedbackUserSession');
+        
+        if (savedSession) {
+            const session = JSON.parse(savedSession);
+            const now = Date.now();
+            
+            // Session valid for 1 hour
+            if (session.timestamp && (now - session.timestamp) < 3600000) {
+                console.log('Found valid session for:', session.email);
+                
+                // Restore user data
+                currentUser = session.email;
+                currentUserData = session.userData;
+                
+                // Show the form directly
+                showFormForAuthenticatedUser();
+                return;
+            } else {
+                console.log('Session expired, clearing...');
+                sessionStorage.removeItem('feedbackUserSession');
+            }
+        }
+    } catch (e) {
+        console.log('No valid session found:', e);
+    }
+    
+    // No valid session, initialize Google Sign-In
+    initializeGoogleSignIn();
+}
+
+/**
+ * Save session to sessionStorage
+ */
+function saveSession(email, userData) {
+    try {
+        sessionStorage.setItem('feedbackUserSession', JSON.stringify({
+            email: email,
+            userData: userData,
+            timestamp: Date.now()
+        }));
+        console.log('Session saved for:', email);
+    } catch (e) {
+        console.log('Could not save session:', e);
+    }
+}
+
+/**
+ * Clear saved session
+ */
+function clearSession() {
+    try {
+        sessionStorage.removeItem('feedbackUserSession');
+        console.log('Session cleared');
+    } catch (e) {
+        console.log('Could not clear session:', e);
+    }
+}
+
+/**
+ * Show form for already authenticated user
+ */
+function showFormForAuthenticatedUser() {
+    // Hide loading
+    const loadingEl = document.getElementById('signinLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
+    
+    // Show form, hide auth
+    document.getElementById('authCard').style.display = 'none';
+    document.getElementById('formCard').classList.add('active');
+    
+    // Show sign-out button at bottom
+    const signoutContainer = document.getElementById('signoutContainer');
+    if (signoutContainer) signoutContainer.classList.add('active');
+    
+    // Populate hidden user info elements (for JS reference)
+    document.getElementById('userName').textContent = currentUserData.name;
+    document.getElementById('userEmail').textContent = currentUserData.email;
+    document.getElementById('userAvatar').src = currentUserData.picture || '';
+    
+    // Set all dynamic hints
+    updateQuestionHints();
+    
+    // Reset to first question
+    currentQuestion = 1;
+    updateProgress();
+}
 
 /**
  * Initialize Google Sign-In
@@ -113,9 +205,10 @@ function initializeGoogleSignIn() {
         google.accounts.id.initialize({
             client_id: clientId,
             callback: handleCredentialResponse,
-            auto_select: false, // Disable auto-select to prevent issues
+            auto_select: true, // Allow auto-select for returning users
             cancel_on_tap_outside: false,
-            itp_support: true // Intelligent Tracking Prevention support for Safari/iOS
+            itp_support: true, // Intelligent Tracking Prevention support for Safari/iOS
+            use_fedcm_for_prompt: false // Disable FedCM to avoid redirect issues
         });
         
         // Render the sign-in button
@@ -135,6 +228,20 @@ function initializeGoogleSignIn() {
         // Hide loading indicator
         const loadingEl = document.getElementById('signinLoading');
         if (loadingEl) loadingEl.style.display = 'none';
+        
+        // Try to auto-prompt for One Tap sign-in (for returning users)
+        // This will automatically sign in users who have previously authenticated
+        google.accounts.id.prompt((notification) => {
+            console.log('One Tap prompt notification:', notification);
+            
+            if (notification.isNotDisplayed()) {
+                console.log('One Tap not displayed. Reason:', notification.getNotDisplayedReason());
+            } else if (notification.isSkippedMoment()) {
+                console.log('One Tap skipped. Reason:', notification.getSkippedReason());
+            } else if (notification.isDismissedMoment()) {
+                console.log('One Tap dismissed. Reason:', notification.getDismissedReason());
+            }
+        });
         
         console.log('Google Sign-In initialized successfully');
         
@@ -234,14 +341,21 @@ function handleCredentialResponse(response) {
         firstName: payload.given_name || payload.name.split(' ')[0] // Extract first name
     };
     
+    // Save session for future visits
+    saveSession(currentUser, currentUserData);
+    
     // Show form, hide auth
     document.getElementById('authCard').style.display = 'none';
     document.getElementById('formCard').classList.add('active');
     
-    // Populate user info
+    // Populate user info (hidden elements for JS reference)
     document.getElementById('userName').textContent = currentUserData.name;
     document.getElementById('userEmail').textContent = currentUserData.email;
     document.getElementById('userAvatar').src = currentUserData.picture;
+    
+    // Show sign-out button at bottom
+    const signoutContainer = document.getElementById('signoutContainer');
+    if (signoutContainer) signoutContainer.classList.add('active');
     
     // Set all dynamic hints
     updateQuestionHints();
@@ -289,12 +403,20 @@ function parseJwt(token) {
  */
 function signOut() {
     google.accounts.id.disableAutoSelect();
+    
+    // Clear session storage
+    clearSession();
+    
     currentUser = null;
     currentUserData = null;
     document.getElementById('formCard').classList.remove('active');
     document.getElementById('authCard').style.display = 'block';
     document.getElementById('authError').innerHTML = '';
     document.getElementById('feedbackForm').reset();
+    
+    // Hide sign-out button
+    const signoutContainer = document.getElementById('signoutContainer');
+    if (signoutContainer) signoutContainer.classList.remove('active');
     
     // Clear answer cache
     Object.keys(answerCache).forEach(key => delete answerCache[key]);
