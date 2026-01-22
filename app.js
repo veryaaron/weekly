@@ -318,29 +318,38 @@ async function nextQuestion(current) {
         generateBtn.disabled = true;
         generateBtn.innerHTML = '<span class="loading"></span> Analyzing your answers...';
         
+        console.log('Starting AI generation...');
+        console.log('Cached answers:', answerCache);
+        
         try {
             // Generate AI summary and follow-up question
+            console.log('Calling generateAIFollowUpQuestion...');
             const aiResponse = await window.generateAIFollowUpQuestion(currentUserData, answerCache);
-            console.log('AI Response:', aiResponse);
+            console.log('AI Response received:', aiResponse);
             
             // Store both summary and question
             answerCache.aiSummary = aiResponse.summary;
             answerCache.aiQuestion = aiResponse.question;
             
             // Update question 4 hint with the AI-generated question
-            document.getElementById('aiQuestionHint').textContent = aiResponse.question;
-            
-            // Optionally show the summary above the question
-            // You could add a summary display element if desired
+            const hintElement = document.getElementById('aiQuestionHint');
+            if (hintElement) {
+                hintElement.textContent = aiResponse.question;
+                console.log('Updated hint element with AI question');
+            } else {
+                console.error('Could not find aiQuestionHint element');
+            }
             
             generateBtn.innerHTML = 'Generate Follow-up Question →';
             generateBtn.disabled = false;
         } catch (error) {
             console.error('Error generating AI question:', error);
+            console.error('Error details:', error.message, error.stack);
             const firstName = currentUserData.firstName || currentUserData.name.split(' ')[0];
-            document.getElementById('aiQuestionHint').textContent = `Is there anything else important you'd like to discuss ${firstName}?`;
+            const fallbackQuestion = `Is there anything else important you'd like to discuss ${firstName}?`;
+            document.getElementById('aiQuestionHint').textContent = fallbackQuestion;
             answerCache.aiSummary = 'Thank you for your updates.';
-            answerCache.aiQuestion = `Is there anything else important you'd like to discuss ${firstName}?`;
+            answerCache.aiQuestion = fallbackQuestion;
             generateBtn.innerHTML = 'Generate Follow-up Question →';
             generateBtn.disabled = false;
         }
@@ -420,14 +429,16 @@ async function handleFormSubmit(e) {
         // AI-generated summary and question
         aiSummary: answerCache.aiSummary || '',
         aiQuestion: answerCache.aiQuestion || '',
-        // Answer to the AI-generated question
-        aiAnswer: textareas.aiGeneratedQuestion.value
+        // Answer to the AI-generated question (FIX: correct textarea ID)
+        aiAnswer: textareas.aiGeneratedQuestion ? textareas.aiGeneratedQuestion.value : document.getElementById('aiFollowUp').value
     };
     
     console.log('Submitting form data:', formData);
 
     try {
+        console.log('Calling submitToGoogleSheets...');
         await submitToGoogleSheets(formData);
+        console.log('Submission successful!');
         
         // Hide form, show success
         document.getElementById('question4').classList.remove('active');
@@ -440,7 +451,8 @@ async function handleFormSubmit(e) {
         }, FEEDBACK_CONFIG.FORM_SETTINGS.AUTO_LOGOUT_DELAY);
     } catch (error) {
         console.error('Submission error:', error);
-        alert('Could not submit feedback. Please try again or contact your manager.');
+        console.error('Error details:', error.message, error.stack);
+        alert('Could not submit feedback. Please try again or contact your manager.\n\nError: ' + error.message);
         submitBtn.innerHTML = 'Submit Feedback ✓';
         submitBtn.disabled = false;
     }
@@ -450,17 +462,29 @@ async function handleFormSubmit(e) {
  * Submit data to Google Sheets via Apps Script
  */
 async function submitToGoogleSheets(data) {
-    await fetch(FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    });
+    console.log('Submitting to:', FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL);
+    console.log('Data being sent:', data);
     
-    // Small delay to ensure submission completes
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+        const response = await fetch(FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Required for Google Apps Script
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('Fetch completed (no-cors mode - cannot read response)');
+        
+        // Longer delay to ensure submission completes
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        console.log('Submission delay completed');
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw new Error('Network error: ' + error.message);
+    }
 }
 
 // ========================================

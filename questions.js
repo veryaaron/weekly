@@ -133,6 +133,11 @@ SUMMARY: [your 2-3 sentence summary]
 QUESTION: [your single pertinent question]`;
 
     try {
+        console.log('Generating AI question for:', firstName);
+        console.log('Accomplishments:', cachedAnswers.accomplishments?.substring(0, 50) + '...');
+        console.log('Blockers:', cachedAnswers.blockers?.substring(0, 50) + '...');
+        console.log('Priorities:', cachedAnswers.priorities?.substring(0, 50) + '...');
+        
         const headers = {
             'Content-Type': 'application/json',
         };
@@ -140,8 +145,12 @@ QUESTION: [your single pertinent question]`;
         // Add API key if configured
         if (window.FEEDBACK_CONFIG && window.FEEDBACK_CONFIG.ANTHROPIC_API_KEY) {
             headers['x-api-key'] = window.FEEDBACK_CONFIG.ANTHROPIC_API_KEY;
+            console.log('Using configured API key');
+        } else {
+            console.log('No API key configured, using public endpoint');
         }
 
+        console.log('Calling Anthropic API...');
         const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: headers,
@@ -155,24 +164,45 @@ QUESTION: [your single pertinent question]`;
             })
         });
 
+        console.log('API Response status:', apiResponse.status);
+        
+        if (!apiResponse.ok) {
+            const errorText = await apiResponse.text();
+            console.error('API Error response:', errorText);
+            throw new Error(`API returned ${apiResponse.status}: ${errorText}`);
+        }
+
         const data = await apiResponse.json();
+        console.log('API Response data:', data);
+        
         const response = data.content[0].text.trim();
         
-        console.log('AI Response:', response);
+        console.log('AI Generated text:', response);
         
         // Parse the response to extract summary and question
         const summaryMatch = response.match(/SUMMARY:\s*(.+?)(?=QUESTION:|$)/s);
         const questionMatch = response.match(/QUESTION:\s*(.+?)$/s);
         
-        return {
+        const result = {
             summary: summaryMatch ? summaryMatch[1].trim() : '',
             question: questionMatch ? questionMatch[1].trim() : 'What else would you like to share about this week?'
         };
+        
+        console.log('Parsed result:', result);
+        
+        return result;
     } catch (error) {
-        console.error('Error generating AI question:', error);
+        console.error('Error in generateAIFollowUpQuestion:', error);
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
         // Fallback
         return {
             summary: 'Thank you for sharing your updates this week.',
+            question: 'Is there anything else important you\'d like to discuss?'
+        };
+    }
             question: 'Is there anything else important you\'d like to discuss?'
         };
     }
