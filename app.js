@@ -202,11 +202,24 @@ function handleCredentialResponse(response) {
     document.getElementById('userEmail').textContent = currentUserData.email;
     document.getElementById('userAvatar').src = currentUserData.picture;
     
-    // Set dynamic hint for accomplishments question
+    // Set dynamic hint for accomplishments question AFTER form is visible
     const accomplishmentsHint = document.querySelector('#question1 .question-hint');
-    if (accomplishmentsHint) {
+    console.log('Setting dynamic hint...');
+    console.log('Hint element found:', !!accomplishmentsHint);
+    console.log('QUESTIONS available:', !!QUESTIONS);
+    console.log('User data:', currentUserData);
+    
+    if (accomplishmentsHint && QUESTIONS && QUESTIONS.DEFINITIONS) {
         const question = QUESTIONS.DEFINITIONS.accomplishments;
-        accomplishmentsHint.textContent = question.generateHint(currentUserData, answerCache);
+        if (question && question.generateHint) {
+            const hintText = question.generateHint(currentUserData, answerCache);
+            console.log('Generated hint:', hintText);
+            accomplishmentsHint.textContent = hintText;
+        } else {
+            console.error('Question or generateHint function not found');
+        }
+    } else {
+        console.error('Could not find accomplishments hint element or QUESTIONS not loaded');
     }
     
     // Reset to first question
