@@ -118,6 +118,20 @@
                 </div>
             </form>
         </div>
+        
+        <!-- Admin Panel (only visible to admins) -->
+        <div class="admin-card" id="adminCard" style="display: none;">
+            <h3>📊 Manager Tools</h3>
+            <p>Generate a report for the current week's submissions</p>
+            
+            <div class="admin-controls">
+                <button class="btn-admin" id="generateReportBtn" onclick="generateReport()">
+                    Generate Weekly Report
+                </button>
+            </div>
+            
+            <div id="reportStatus"></div>
+        </div>
     </div>
     
     <!-- Fixed Sign Out Button at Bottom -->

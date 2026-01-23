@@ -9,7 +9,7 @@
 const CONFIG = {
     // Google OAuth Settings
     // Get this from Google Cloud Console > Credentials
-    GOOGLE_CLIENT_ID: '287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID_HERE',
     
     // Domain restriction for email authentication
     // Option 1: Single domain
@@ -20,9 +20,16 @@ const CONFIG = {
     //   ALLOWED_DOMAINS: 'ANY_WORKSPACE'
     ALLOWED_DOMAINS: ['kubapay.com', 'vixtechnology.com'],
     
+    // Admin users who can generate reports
+    // These users will see the "Manager Tools" panel after signing in
+    ADMIN_EMAILS: [
+        'aaron@kubapay.com'
+        // Add more admin emails as needed
+    ],
+    
     // Google Apps Script URL
     // This is where form submissions are sent
-    GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwMabfFbwWpBKiyRVcFsB9vz5oJjbp30JtuEtyt5GBKTyFf6r_MDHA0cqAv_GGokzjhew/exec',
+    GOOGLE_SCRIPT_URL: 'https://script.google.com/a/macros/kubapay.com/s/AKfycbwT3ch8qlftL0rOz6ZwvzA_U8GF44JM-YqLwO1HHxwWrMImumlqSKDARNRwnDVqT_BT/exec',
     
     // Anthropic API Settings (Optional - for AI suggestions)
     // Leave blank to use the public API (has rate limits)

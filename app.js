@@ -167,6 +167,9 @@ function showFormForAuthenticatedUser() {
     const signoutContainer = document.getElementById('signoutContainer');
     if (signoutContainer) signoutContainer.classList.add('active');
     
+    // Check if user is admin and show admin panel
+    checkAndShowAdminPanel();
+    
     // Populate hidden user info elements (for JS reference)
     document.getElementById('userName').textContent = currentUserData.name;
     document.getElementById('userEmail').textContent = currentUserData.email;
@@ -356,6 +359,9 @@ function handleCredentialResponse(response) {
     // Show sign-out button at bottom
     const signoutContainer = document.getElementById('signoutContainer');
     if (signoutContainer) signoutContainer.classList.add('active');
+    
+    // Check if user is admin and show admin panel
+    checkAndShowAdminPanel();
     
     // Set all dynamic hints
     updateQuestionHints();
@@ -665,6 +671,86 @@ async function submitToGoogleSheets(data) {
 }
 
 // ========================================
+// ADMIN FUNCTIONS
+// ========================================
+
+/**
+ * Check if current user is an admin and show admin panel
+ */
+function checkAndShowAdminPanel() {
+    const adminEmails = CONFIG.ADMIN_EMAILS || [];
+    const userEmail = currentUserData?.email?.toLowerCase();
+    
+    if (!userEmail) return;
+    
+    const isAdmin = adminEmails.some(email => email.toLowerCase() === userEmail);
+    
+    const adminCard = document.getElementById('adminCard');
+    if (adminCard) {
+        adminCard.style.display = isAdmin ? 'block' : 'none';
+    }
+    
+    console.log('Admin check:', userEmail, isAdmin ? '(admin)' : '(not admin)');
+}
+
+/**
+ * Generate weekly report (called from admin panel)
+ */
+async function generateReport() {
+    const btn = document.getElementById('generateReportBtn');
+    const statusEl = document.getElementById('reportStatus');
+    
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span> Generating...';
+    statusEl.className = 'loading';
+    statusEl.innerHTML = 'Generating report, please wait...';
+    
+    try {
+        const scriptUrl = CONFIG.GOOGLE_SCRIPT_URL;
+        
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify({
+                action: 'generateReport',
+                requestedBy: currentUserData.email
+            })
+        });
+        
+        const text = await response.text();
+        let result;
+        
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+            throw new Error('Invalid response from server');
+        }
+        
+        if (result.status === 'success') {
+            statusEl.className = 'success';
+            statusEl.innerHTML = `✓ Report generated! <a href="${result.docUrl}" target="_blank">Open Report →</a>`;
+        } else if (result.status === 'no_responses') {
+            statusEl.className = 'error';
+            statusEl.innerHTML = '⚠️ No responses found for this week yet.';
+        } else {
+            throw new Error(result.message || 'Unknown error');
+        }
+        
+    } catch (error) {
+        console.error('Report generation error:', error);
+        statusEl.className = 'error';
+        statusEl.innerHTML = '❌ Error generating report: ' + error.message;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Generate Weekly Report';
+    }
+}
+
+// ========================================
 // EXPOSE FUNCTIONS GLOBALLY
 // ========================================
 
@@ -673,6 +759,7 @@ window.handleCredentialResponse = handleCredentialResponse;
 window.signOut = signOut;
 window.nextQuestion = nextQuestion;
 window.prevQuestion = prevQuestion;
+window.generateReport = generateReport;
 
 // Expose answer cache for use in dynamic question generation
 window.getAnswerCache = () => answerCache;

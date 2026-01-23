@@ -538,3 +538,88 @@ textarea::placeholder {
 .text-center {
     text-align: center;
 }
+
+/* ========================================
+   ADMIN PANEL
+   ======================================== */
+
+.admin-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 4px 24px var(--shadow-color);
+    border-left: 4px solid var(--kuba-yellow);
+    transition: background-color 0.3s ease;
+}
+
+.admin-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.admin-card > p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.admin-controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-admin {
+    padding: 12px 24px;
+    background: var(--kuba-yellow);
+    color: var(--kuba-navy);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Ubuntu', 'Calibri', sans-serif;
+    transition: all 0.2s ease;
+}
+
+.btn-admin:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-admin:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#reportStatus {
+    margin-top: 15px;
+    font-size: 0.9rem;
+}
+
+#reportStatus.success {
+    color: var(--kuba-green);
+}
+
+#reportStatus.error {
+    color: var(--kuba-coral);
+}
+
+#reportStatus.loading {
+    color: var(--text-secondary);
+}
+
+#reportStatus a {
+    color: var(--kuba-navy);
+    font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+    #reportStatus a {
+        color: var(--kuba-yellow);
+    }
+}
