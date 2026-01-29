@@ -4,6 +4,11 @@
  *
  * Main application logic for Weekly Feedback Form
  *
+ * v2.0 - Auto-Login UX Improvement
+ * - Enabled auto_select for seamless returning user sign-in
+ * - Removed disableAutoSelect() from init (only on sign-out now)
+ * - Users no longer need to click their name to sign in
+ *
  * v1.9 - FedCM Migration & OAuth Cleanup
  * - Removed deprecated prompt notification methods (FedCM compliance)
  * - Fixed avatar 404 error when user has no picture
@@ -206,14 +211,12 @@ function showFormForAuthenticatedUser() {
 /**
  * Initialize Google Sign-In with FedCM
  *
+ * v2.0 CHANGE: Enabled auto_select for seamless returning user experience.
+ * Removed disableAutoSelect() from init - now only called on explicit sign-out.
+ *
  * v1.9 CHANGE: Removed deprecated prompt notification methods for FedCM compliance.
- * The methods isNotDisplayed(), isSkippedMoment(), isDismissedMoment() and their
- * corresponding getReason() methods are deprecated and will stop working when
- * FedCM becomes mandatory.
  *
  * v1.6 CHANGE: Enabled FedCM (Federated Credential Management) for modern auth.
- * FedCM moves credential caching to the browser level, eliminating conflicts
- * with Google's own caching that caused blank pages on mobile.
  */
 function initializeGoogleSignIn() {
     console.log('Initializing Google Sign-In with FedCM...');
@@ -232,22 +235,20 @@ function initializeGoogleSignIn() {
     }
 
     try {
-        // v1.6: Clear any stale Google auth state before initializing
-        // This prevents cached credential conflicts that cause blank pages on mobile
-        google.accounts.id.disableAutoSelect();
+        // v2.0: Removed disableAutoSelect() - we want auto-login for returning users
+        // disableAutoSelect is now only called on explicit sign-out
 
         // Initialize Google Identity Services with FedCM enabled
-        // v1.9: Simplified config - removed deprecated options
         google.accounts.id.initialize({
             client_id: clientId,
             callback: handleCredentialResponse,
-            auto_select: false,
+            auto_select: true,  // v2.0: Enable auto-login for returning users
             cancel_on_tap_outside: false,
             itp_support: true,
             use_fedcm_for_prompt: true
         });
 
-        // Render the sign-in button
+        // Render the sign-in button (fallback if auto-select doesn't work)
         google.accounts.id.renderButton(
             document.getElementById('g_id_signin'),
             {
@@ -265,12 +266,11 @@ function initializeGoogleSignIn() {
         const loadingEl = document.getElementById('signinLoading');
         if (loadingEl) loadingEl.style.display = 'none';
 
-        // v1.9: Simplified prompt call - removed deprecated notification callbacks
-        // The prompt will show the FedCM UI if available, otherwise the button works
-        // We no longer check notification status as those methods are deprecated
+        // Trigger the FedCM prompt - with auto_select: true, this will
+        // automatically sign in returning users without requiring a click
         google.accounts.id.prompt();
 
-        console.log('Google Sign-In initialized successfully with FedCM');
+        console.log('Google Sign-In initialized successfully with FedCM (auto_select enabled)');
 
         // Show help button after 5 seconds in case user has issues
         setTimeout(() => {
