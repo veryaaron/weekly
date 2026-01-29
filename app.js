@@ -739,17 +739,23 @@ async function generateReport() {
         });
         
         const text = await response.text();
+        console.log('Raw response text:', text);
         let result;
         
         try {
             result = JSON.parse(text);
+            console.log('Parsed result:', result);
+            console.log('docUrl value:', result.docUrl);
         } catch (e) {
+            console.error('JSON parse error:', e, 'Raw text was:', text);
             throw new Error('Invalid response from server');
         }
         
         if (result.status === 'success') {
             statusEl.className = 'success';
-            statusEl.innerHTML = `✓ Report generated! <a href="${result.docUrl}" target="_blank">Open Report →</a>`;
+            const reportUrl = result.docUrl || result.reportUrl || result.url;
+            console.log('Using URL:', reportUrl);
+            statusEl.innerHTML = `✓ Report generated! <a href="${reportUrl}" target="_blank">Open Report →</a>`;
         } else if (result.status === 'no_responses') {
             statusEl.className = 'error';
             statusEl.innerHTML = '⚠️ No responses found for this week yet.';
