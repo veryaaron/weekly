@@ -4,8 +4,14 @@
  * 
  * Main application logic for Weekly Feedback Form
  * 
- * v1.6 - FedCM Authentication Fix
- * Only change: Updated initializeGoogleSignIn() to use FedCM for better mobile caching
+ * Version: 1.7
+ * 
+ * Changelog:
+ * - v1.7: Fixed reportUrl property name (was docUrl), centered sign-in button
+ * - v1.6: Added FedCM support for mobile authentication caching fix
+ * - v1.5: Added admin panel, session persistence, report generation
+ * 
+ * See README.md for full project documentation
  */
 
 // ========================================
@@ -749,7 +755,8 @@ async function generateReport() {
         
         if (result.status === 'success') {
             statusEl.className = 'success';
-            statusEl.innerHTML = `✓ Report generated! <a href="${result.docUrl}" target="_blank">Open Report →</a>`;
+            // v1.7 FIX: Changed from result.docUrl to result.reportUrl to match Apps Script response
+            statusEl.innerHTML = `✓ Report generated! <a href="${result.reportUrl}" target="_blank">Open Report →</a>`;
         } else if (result.status === 'no_responses') {
             statusEl.className = 'error';
             statusEl.innerHTML = '⚠️ No responses found for this week yet.';

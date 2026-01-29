@@ -5,6 +5,8 @@
  * Kuba Brand Styling for Weekly Feedback Form
  * Based on Kuba Brand Guide - Documents and Presentations
  * 
+ * Version: 1.7
+ * 
  * Typography: Ubuntu (Primary), Calibri (Fallback)
  * Colors: Navy #272251, Yellow #ffd618, Coral #e9426d, Green #00a870
  */
@@ -189,6 +191,12 @@ body {
     align-items: center;
     gap: 15px;
     margin-bottom: 15px;
+}
+
+/* v1.7 FIX: Center the Google Sign-in button */
+#g_id_signin {
+    display: flex;
+    justify-content: center;
 }
 
 #signinLoading {
