@@ -80,7 +80,7 @@ Uses Kuba brand guidelines:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.7 | 2025-01-29 | Fixed report URL (`reportUrl` not `docUrl`), centered sign-in button |
+| v1.7 | 2025-01-29 | Fixed hint selector (`.question-hint` → `.hint`), centered sign-in button |
 | v1.6 | 2025-01-29 | Added FedCM authentication for mobile caching fix |
 | v1.5 | 2025-01-23 | Added admin panel, session persistence, report generation |
 
@@ -97,10 +97,9 @@ The Google Apps Script should return:
 ```json
 {
   "status": "success",
-  "reportUrl": "https://docs.google.com/document/d/..."
+  "docUrl": "https://docs.google.com/document/d/..."
 }
 ```
-Note: Property is `reportUrl`, not `docUrl`.
 
 ## 🚀 Deployment
 

@@ -7,7 +7,7 @@
  * Version: 1.7
  * 
  * Changelog:
- * - v1.7: Fixed reportUrl property name (was docUrl), centered sign-in button
+ * - v1.7: Fixed hint selector (.question-hint → .hint), centered sign-in button
  * - v1.6: Added FedCM support for mobile authentication caching fix
  * - v1.5: Added admin panel, session persistence, report generation
  * 
@@ -403,7 +403,7 @@ function updateQuestionHints() {
     
     questionsToUpdate.forEach((fieldName, index) => {
         const questionNum = index + 1;
-        const hintElement = document.querySelector(`#question${questionNum} .question-hint`);
+        const hintElement = document.querySelector(`#question${questionNum} .hint`);
         
         if (hintElement && QUESTIONS && QUESTIONS.DEFINITIONS) {
             const question = QUESTIONS.DEFINITIONS[fieldName];
@@ -755,8 +755,8 @@ async function generateReport() {
         
         if (result.status === 'success') {
             statusEl.className = 'success';
-            // v1.7 FIX: Changed from result.docUrl to result.reportUrl to match Apps Script response
-            statusEl.innerHTML = `✓ Report generated! <a href="${result.reportUrl}" target="_blank">Open Report →</a>`;
+            // v1.7 FIX: Property is docUrl (matching what Apps Script returns)
+            statusEl.innerHTML = `✓ Report generated! <a href="${result.docUrl}" target="_blank">Open Report →</a>`;
         } else if (result.status === 'no_responses') {
             statusEl.className = 'error';
             statusEl.innerHTML = '⚠️ No responses found for this week yet.';
