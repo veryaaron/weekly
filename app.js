@@ -4,14 +4,8 @@
  * 
  * Main application logic for Weekly Feedback Form
  * 
- * Version: 1.7
- * 
- * Changelog:
- * - v1.7: Fixed hint selector (.question-hint → .hint), centered sign-in button
- * - v1.6: Added FedCM support for mobile authentication caching fix
- * - v1.5: Added admin panel, session persistence, report generation
- * 
- * See README.md for full project documentation
+ * v1.6 - FedCM Authentication Fix
+ * Only change: Updated initializeGoogleSignIn() to use FedCM for better mobile caching
  */
 
 // ========================================
@@ -701,7 +695,7 @@ async function submitToGoogleSheets(data) {
  * Check if current user is an admin and show admin panel
  */
 function checkAndShowAdminPanel() {
-    const adminEmails = CONFIG.ADMIN_EMAILS || [];
+    const adminEmails = FEEDBACK_CONFIG.ADMIN_EMAILS || [];
     const userEmail = currentUserData?.email?.toLowerCase();
     
     if (!userEmail) return;
@@ -730,7 +724,7 @@ async function generateReport() {
     statusEl.innerHTML = 'Generating report, please wait...';
     
     try {
-        const scriptUrl = CONFIG.GOOGLE_SCRIPT_URL;
+        const scriptUrl = FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL;
         
         const response = await fetch(scriptUrl, {
             method: 'POST',
@@ -755,7 +749,6 @@ async function generateReport() {
         
         if (result.status === 'success') {
             statusEl.className = 'success';
-            // v1.7 FIX: Property is docUrl (matching what Apps Script returns)
             statusEl.innerHTML = `✓ Report generated! <a href="${result.docUrl}" target="_blank">Open Report →</a>`;
         } else if (result.status === 'no_responses') {
             statusEl.className = 'error';
