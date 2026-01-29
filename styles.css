@@ -1,12 +1,12 @@
 /**
  * STYLES.CSS
  * ==========
- * 
+ *
  * Kuba Brand Styling for Weekly Feedback Form
  * Based on Kuba Brand Guide - Documents and Presentations
- * 
- * Version: 1.7
- * 
+ *
+ * Version: 1.9 - FedCM OAuth fixes
+ *
  * Typography: Ubuntu (Primary), Calibri (Fallback)
  * Colors: Navy #272251, Yellow #ffd618, Coral #e9426d, Green #00a870
  */
@@ -406,6 +406,90 @@ textarea::placeholder {
     }
 }
 
+/* Navigation Buttons */
+.nav-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.btn-next,
+.btn-back,
+.btn-submit {
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Ubuntu', 'Calibri', sans-serif;
+}
+
+.btn-next,
+.btn-submit {
+    flex: 1;
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+    border: 2px solid var(--btn-primary-bg);
+}
+
+.btn-next:hover,
+.btn-submit:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-next:disabled,
+.btn-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-back {
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+    border: 2px solid var(--btn-secondary-border);
+}
+
+.btn-back:hover {
+    background: var(--btn-secondary-border);
+    color: var(--btn-primary-text);
+}
+
+@media (prefers-color-scheme: dark) {
+    .btn-back:hover {
+        color: var(--kuba-navy);
+    }
+}
+
+/* Character count */
+.char-count {
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    margin-bottom: 10px;
+}
+
+/* Question labels and hints */
+label.question-label,
+.question label {
+    display: block;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.hint {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
 /* ========================================
    LOADING SPINNER
    ======================================== */
@@ -426,6 +510,29 @@ textarea::placeholder {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* Spinner alias for loading indicator */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--kuba-yellow);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Sign-in loading state */
+.signin-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }
 
 /* ========================================

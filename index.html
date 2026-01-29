@@ -4,26 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Team Feedback</title>
-    
+
     <!-- Google Sign-In -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
-    
+
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=1.7">
-    
+    <link rel="stylesheet" href="styles.css?v=1.9">
+
     <!-- Configuration (must load first) -->
-    <script src="config.js?v=1.7"></script>
-    
+    <script src="config.js?v=1.9"></script>
+
     <!-- Questions Definition -->
-    <script src="questions.js?v=1.7"></script>
-    
+    <script src="questions.js?v=1.9"></script>
+
     <!-- Application Logic -->
-    <script src="app.js?v=1.7"></script>
+    <script src="app.js?v=1.9"></script>
 </head>
 <body>
     <div class="container">
@@ -35,170 +35,145 @@
                 </svg>
                 <h1>Weekly Feedback</h1>
             </div>
-            <p class="subtitle">Share your week's highlights, challenges, and ideas</p>
+            <p class="subtitle">Share your week's highlights, challenges, and priorities</p>
         </header>
-        
+
         <!-- Auth Card -->
         <div class="auth-card" id="authCard">
             <h2>🔐 Team Access</h2>
             <p>Please sign in with your company Google account</p>
-            
+
             <div id="signinLoading" class="signin-loading">
                 <span class="spinner"></span>
                 Loading sign-in...
             </div>
-            
+
             <!-- Google Sign-In button will be rendered here -->
             <div id="g_id_onload"></div>
             <div id="g_id_signin"></div>
-            
+
             <div id="authError"></div>
-            
+
             <div id="authHelp" class="auth-help" style="display: none;">
                 <p>Having trouble signing in?</p>
                 <button class="btn-refresh" onclick="location.reload()">🔄 Refresh Page</button>
             </div>
         </div>
-        
+
         <!-- Form Card -->
         <div class="form-card" id="formCard">
             <form id="feedbackForm">
                 <div class="progress-container">
                     <div class="progress-bar" id="progressBar"></div>
                 </div>
-                <p class="progress-text" id="progressIndicator">Question 1 of 5</p>
-                
+
                 <div class="questions-container">
-                    <!-- Question 1: Wins -->
+                    <!-- Question 1: Accomplishments -->
                     <div class="question active" id="question1">
-                        <label for="wins">What were your wins this week?</label>
-                        <p class="hint">Share accomplishments, completed tasks, or positive outcomes</p>
-                        <textarea 
-                            id="wins" 
-                            name="wins" 
-                            rows="4" 
+                        <label class="question-label" for="accomplishments">Key Accomplishments This Week</label>
+                        <p class="hint" id="hint1">What significant progress did you or your team make this week?</p>
+                        <textarea
+                            id="accomplishments"
+                            name="accomplishments"
+                            rows="5"
                             maxlength="2000"
-                            placeholder="e.g., Shipped the new dashboard feature, closed 3 sales deals..."
+                            placeholder="e.g., Shipped the new dashboard feature, closed 3 sales deals, completed user interviews..."
+                            required
                         ></textarea>
-                        <p class="char-count" id="winsCount">2000 characters remaining</p>
-                        <button type="button" class="btn-ai" onclick="getAISuggestion('wins')">✨ Get AI Help</button>
-                        <div class="ai-suggestion"></div>
+                        <p class="char-count" id="accomplishmentsCount">0 characters</p>
                         <div class="nav-buttons">
-                            <button type="button" class="btn-next" onclick="nextQuestion()">Continue →</button>
+                            <button type="button" class="btn-next" onclick="nextQuestion(1)">Continue →</button>
                         </div>
                     </div>
-                    
-                    <!-- Question 2: Challenges -->
+
+                    <!-- Question 2: Blockers -->
                     <div class="question" id="question2">
-                        <label for="challenges">What challenges did you face?</label>
-                        <p class="hint">Blockers, difficulties, or areas where you need support</p>
-                        <textarea 
-                            id="challenges" 
-                            name="challenges" 
-                            rows="4" 
+                        <label class="question-label" for="blockers">Blockers & Challenges</label>
+                        <p class="hint" id="hint2">What is currently blocking your path? What support or resources do you need?</p>
+                        <textarea
+                            id="blockers"
+                            name="blockers"
+                            rows="5"
                             maxlength="2000"
-                            placeholder="e.g., Waiting on API access, struggling with the new framework..."
+                            placeholder="e.g., Waiting on API access, need budget approval, struggling with the new framework..."
+                            required
                         ></textarea>
-                        <p class="char-count" id="challengesCount">2000 characters remaining</p>
-                        <button type="button" class="btn-ai" onclick="getAISuggestion('challenges')">✨ Get AI Help</button>
-                        <div class="ai-suggestion"></div>
+                        <p class="char-count" id="blockersCount">0 characters</p>
                         <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion()">← Back</button>
-                            <button type="button" class="btn-next" onclick="nextQuestion()">Continue →</button>
+                            <button type="button" class="btn-back" onclick="prevQuestion(2)">← Back</button>
+                            <button type="button" class="btn-next" onclick="nextQuestion(2)">Continue →</button>
                         </div>
                     </div>
-                    
+
                     <!-- Question 3: Priorities -->
                     <div class="question" id="question3">
-                        <label for="priorities">What are your priorities for next week?</label>
-                        <p class="hint">Key focus areas and planned deliverables</p>
-                        <textarea 
-                            id="priorities" 
-                            name="priorities" 
-                            rows="4" 
+                        <label class="question-label" for="priorities">Priorities</label>
+                        <p class="hint" id="hint3">What are your current priorities and are you happy this is the right priority list for the business?</p>
+                        <textarea
+                            id="priorities"
+                            name="priorities"
+                            rows="5"
                             maxlength="2000"
-                            placeholder="e.g., Launch beta version, complete user interviews..."
+                            placeholder="e.g., Launch beta version next week, focus on Q1 revenue targets, complete user research..."
+                            required
                         ></textarea>
-                        <p class="char-count" id="prioritiesCount">2000 characters remaining</p>
-                        <button type="button" class="btn-ai" onclick="getAISuggestion('priorities')">✨ Get AI Help</button>
-                        <div class="ai-suggestion"></div>
+                        <p class="char-count" id="prioritiesCount">0 characters</p>
                         <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion()">← Back</button>
-                            <button type="button" class="btn-next" onclick="nextQuestion()">Continue →</button>
+                            <button type="button" class="btn-back" onclick="prevQuestion(3)">← Back</button>
+                            <button type="button" class="btn-next" id="generateAIBtn" onclick="nextQuestion(3)">Generate Follow-up Question →</button>
                         </div>
                     </div>
-                    
-                    <!-- Question 4: Support -->
+
+                    <!-- Question 4: AI-Generated Follow-up -->
                     <div class="question" id="question4">
-                        <label for="support">What support do you need?</label>
-                        <p class="hint">Resources, decisions, or help from teammates</p>
-                        <textarea 
-                            id="support" 
-                            name="support" 
-                            rows="4" 
+                        <label class="question-label" for="aiFollowUp">Follow-up Question</label>
+                        <p class="hint" id="aiQuestionHint">Loading your personalized follow-up question...</p>
+                        <textarea
+                            id="aiFollowUp"
+                            name="aiFollowUp"
+                            rows="5"
                             maxlength="2000"
-                            placeholder="e.g., Need design review, budget approval for tools..."
+                            placeholder="Please provide your answer to the question above..."
+                            required
                         ></textarea>
-                        <p class="char-count" id="supportCount">2000 characters remaining</p>
-                        <button type="button" class="btn-ai" onclick="getAISuggestion('support')">✨ Get AI Help</button>
-                        <div class="ai-suggestion"></div>
+                        <p class="char-count" id="aiFollowUpCount">0 characters</p>
                         <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion()">← Back</button>
-                            <button type="button" class="btn-next" onclick="nextQuestion()">Continue →</button>
+                            <button type="button" class="btn-back" onclick="prevQuestion(4)">← Back</button>
+                            <button type="submit" class="btn-submit" id="submitBtn">Submit Feedback ✓</button>
                         </div>
                     </div>
-                    
-                    <!-- Question 5: Ideas -->
-                    <div class="question" id="question5">
-                        <label for="ideas">Any ideas or suggestions?</label>
-                        <p class="hint">Process improvements, new opportunities, or general feedback</p>
-                        <textarea 
-                            id="ideas" 
-                            name="ideas" 
-                            rows="4" 
-                            maxlength="2000"
-                            placeholder="e.g., Could we try async standups? Noticed a gap in our onboarding..."
-                        ></textarea>
-                        <p class="char-count" id="ideasCount">2000 characters remaining</p>
-                        <button type="button" class="btn-ai" onclick="getAISuggestion('ideas')">✨ Get AI Help</button>
-                        <div class="ai-suggestion"></div>
-                        <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion()">← Back</button>
-                            <button type="submit" class="btn-submit" id="submitBtn">Submit Feedback ✔</button>
-                        </div>
-                    </div>
-                    
+
                     <!-- Success Screen -->
-                    <div class="question" id="successScreen" style="display: none;">
+                    <div class="success-screen" id="successScreen" style="display: none;">
                         <div class="success-message">
-                            <h3>✔ Feedback Submitted!</h3>
+                            <h3>✓ Feedback Submitted!</h3>
                             <p>Thank you for sharing your weekly update. Your manager will review this shortly.</p>
                         </div>
                     </div>
                 </div>
             </form>
         </div>
-        
+
         <!-- Admin Panel (only visible to admins) -->
         <div class="admin-card" id="adminCard" style="display: none;">
             <h3>📊 Manager Tools</h3>
             <p>Generate a report for the current week's submissions</p>
-            
+
             <div class="admin-controls">
                 <button class="btn-admin" id="generateReportBtn" onclick="generateReport()">
                     Generate Weekly Report
                 </button>
             </div>
-            
+
             <div id="reportStatus"></div>
         </div>
     </div>
-    
+
     <!-- Fixed Sign Out Button at Bottom -->
     <div class="signout-container" id="signoutContainer">
         <button class="btn-signout" onclick="signOut()">Sign Out</button>
     </div>
-    
+
     <!-- Hidden elements for user data (used by JS) -->
     <div id="userName" style="display:none;"></div>
     <div id="userEmail" style="display:none;"></div>

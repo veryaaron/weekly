@@ -1,6 +1,6 @@
 # Weekly Feedback Form - Project Documentation
 
-## 🎯 Project Overview
+## Project Overview
 
 A weekly team feedback collection system built for **Kuba** (a fintech company). The system collects structured weekly updates from team members and generates AI-powered summary reports for managers.
 
@@ -15,7 +15,7 @@ A weekly team feedback collection system built for **Kuba** (a fintech company).
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -57,13 +57,13 @@ A weekly team feedback collection system built for **Kuba** (a fintech company).
 
 ---
 
-## 📁 File Structure
+## File Structure
 
 ### Frontend Files (GitHub Pages)
 
 | File | Purpose | Key Details |
 |------|---------|-------------|
-| `index.html` | Main UI structure | Multi-step form, 5 questions, admin panel |
+| `index.html` | Main UI structure | 4-step form with AI-generated Q4 |
 | `app.js` | Application logic | OAuth, form navigation, API calls, report generation |
 | `questions.js` | Question definitions | Dynamic hints with `generateHint()` functions |
 | `config.js` | Configuration | OAuth client ID, allowed domains, admin emails, API URLs |
@@ -72,6 +72,7 @@ A weekly team feedback collection system built for **Kuba** (a fintech company).
 ### Backend (Google Apps Script)
 
 Single script file deployed as a web app. Contains:
+
 - `doPost()` - Main request router
 - `handleGenerateQuestion()` - Calls Claude API for follow-up questions
 - `handleSubmitFeedback()` - Saves responses to Google Sheets
@@ -80,7 +81,7 @@ Single script file deployed as a web app. Contains:
 
 ---
 
-## 🎨 Branding
+## Branding
 
 Uses **Kuba brand guidelines**:
 
@@ -97,11 +98,12 @@ Dark mode is automatic based on system preference.
 
 ---
 
-## 🔐 Authentication
+## Authentication
 
 Uses **Google Identity Services (GIS)** with **FedCM** (Federated Credential Management).
 
 ### Key OAuth Settings (in app.js `initializeGoogleSignIn`)
+
 ```javascript
 google.accounts.id.initialize({
     client_id: clientId,
@@ -114,21 +116,24 @@ google.accounts.id.initialize({
 ```
 
 ### Why FedCM?
+
 Mobile users were experiencing blank pages at `accounts.google.com/gsi/transform` due to conflicts between Google's library cache and browser cache. FedCM moves credential caching to browser level, eliminating this conflict.
 
 ### Domain Restrictions
+
 - Configured in `config.js` → `ALLOWED_DOMAINS`
 - Currently allows: `kubapay.com`, `vixtechnology.com`
 - Can be set to `'ANY_WORKSPACE'` to allow any Google Workspace domain
 
 ### Admin Users
+
 - Configured in `config.js` → `ADMIN_EMAILS`
 - Currently: `aaron@kubapay.com`
 - Admins see "Manager Tools" panel to generate reports
 
 ---
 
-## 📊 Data Flow
+## Data Flow
 
 ### User Submits Feedback
 
@@ -154,48 +159,20 @@ Mobile users were experiencing blank pages at `accounts.google.com/gsi/transform
 
 ---
 
-## ⚠️ KNOWN ISSUES & CURRENT STATE
+## Form Fields
 
-### Issue 1: Field Name Mismatch (STRUCTURAL)
+The form collects 4 responses:
 
-There's a mismatch between HTML and JavaScript:
-
-| index.html field IDs | questions.js expects |
-|---------------------|---------------------|
-| `wins` | `accomplishments` |
-| `challenges` | `blockers` |
-| `priorities` | `priorities` ✓ |
-| `support` | `aiFollowUp` |
-| `ideas` | (not used) |
-
-**Impact**: The form fields in HTML don't match what the JavaScript expects from `QUESTIONS.getOrder()`. This may cause issues with form initialization and data collection.
-
-**Resolution Needed**: Either update `index.html` field IDs to match `questions.js`, OR update `questions.js` to match the HTML.
-
-### Issue 2: Pending Fixes in app.js (READY TO DEPLOY)
-
-The following fixes have been made in the updated `app.js` but need to be uploaded to GitHub:
-
-| Line | Issue | Fix |
-|------|-------|-----|
-| 400 | CSS selector `.question-hint` doesn't match HTML class `.hint` | Changed to `.hint` |
-| 698 | `CONFIG.ADMIN_EMAILS` - CONFIG not in global scope | Changed to `FEEDBACK_CONFIG.ADMIN_EMAILS` |
-| 727 | `CONFIG.GOOGLE_SCRIPT_URL` - CONFIG not in global scope | Changed to `FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL` |
-
-### Issue 3: Google Apps Script Deployment
-
-The Apps Script must be deployed as a **new version** for changes to take effect. Simply saving the code is not enough.
-
-**To deploy a new version:**
-1. Open Apps Script editor
-2. Click Deploy → Manage deployments
-3. Click pencil icon ✏️ to edit
-4. Change Version dropdown to "New version"
-5. Click Deploy
+| Question | Field ID | Description |
+|----------|----------|-------------|
+| Q1 | `accomplishments` | Key wins and completed work |
+| Q2 | `blockers` | Challenges and support needed |
+| Q3 | `priorities` | Current priorities and focus areas |
+| Q4 | `aiFollowUp` | Answer to AI-generated follow-up question |
 
 ---
 
-## 🔧 Configuration Reference
+## Configuration Reference
 
 ### config.js Settings
 
@@ -203,23 +180,20 @@ The Apps Script must be deployed as a **new version** for changes to take effect
 const CONFIG = {
     // Google OAuth - from Google Cloud Console
     GOOGLE_CLIENT_ID: '287284865613-xxx.apps.googleusercontent.com',
-    
+
     // Allowed email domains (or 'ANY_WORKSPACE')
     ALLOWED_DOMAINS: ['kubapay.com', 'vixtechnology.com'],
-    
+
     // Users who see admin panel
     ADMIN_EMAILS: ['aaron@kubapay.com'],
-    
+
     // Google Apps Script deployment URL
     GOOGLE_SCRIPT_URL: 'https://script.google.com/a/macros/kubapay.com/s/xxx/exec',
-    
-    // Optional - for AI features
-    ANTHROPIC_API_KEY: '',  // Usually stored in Apps Script instead
-    
+
     // Claude model settings
     CLAUDE_MODEL: 'claude-sonnet-4-20250514',
     CLAUDE_MAX_TOKENS: 1000,
-    
+
     // Form behavior
     FORM_SETTINGS: {
         AUTO_LOGOUT_DELAY: 5000  // 5 seconds after submit
@@ -243,11 +217,12 @@ Set in Apps Script → Project Settings → Script Properties:
 
 ---
 
-## 📝 Google Apps Script - Full Reference
+## Google Apps Script Reference
 
 The Google Apps Script is NOT stored in this repository. It lives in Google's infrastructure and is accessed via the deployment URL in config.js.
 
 ### Script Location
+
 - Linked to Kuba Google Workspace
 - Access via: https://script.google.com/
 
@@ -259,7 +234,7 @@ Routes requests based on `action` parameter:
 function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     const action = data.action || 'submit';
-    
+
     if (action === 'generate') {
         return handleGenerateQuestion(data);
     } else if (action === 'submit') {
@@ -267,89 +242,6 @@ function doPost(e) {
     } else if (action === 'generateReport') {
         return handleGenerateReport(data);
     }
-}
-```
-
-### Action: `generate`
-
-**Purpose**: Generate AI follow-up question based on user's first 3 answers
-
-**Input:**
-```json
-{
-    "action": "generate",
-    "firstName": "Aaron",
-    "accomplishments": "...",
-    "blockers": "...",
-    "priorities": "..."
-}
-```
-
-**Output:**
-```json
-{
-    "status": "success",
-    "summary": "2-3 sentence summary",
-    "question": "Personalized follow-up question"
-}
-```
-
-### Action: `submit`
-
-**Purpose**: Save completed feedback form to Google Sheets
-
-**Input:**
-```json
-{
-    "action": "submit",
-    "timestamp": "2026-01-29T14:00:00.000Z",
-    "name": "Aaron Smith",
-    "email": "aaron@kubapay.com",
-    "accomplishments": "...",
-    "blockers": "...",
-    "priorities": "...",
-    "aiSummary": "...",
-    "aiQuestion": "...",
-    "aiAnswer": "..."
-}
-```
-
-**Output:**
-```json
-{
-    "status": "success",
-    "message": "Feedback recorded successfully"
-}
-```
-
-### Action: `generateReport`
-
-**Purpose**: Create weekly summary report as Google Doc
-
-**Input:**
-```json
-{
-    "action": "generateReport",
-    "requestedBy": "aaron@kubapay.com"
-}
-```
-
-**Output (success):**
-```json
-{
-    "status": "success",
-    "docUrl": "https://docs.google.com/document/d/xxx/edit",
-    "responseCount": 5,
-    "week": 5,
-    "year": 2026
-}
-```
-
-**Output (no data):**
-```json
-{
-    "status": "no_responses",
-    "message": "No responses found for this week"
 }
 ```
 
@@ -371,125 +263,9 @@ The Apps Script expects/creates these columns:
 | J | Week Number |
 | K | Year |
 
-### Complete Google Apps Script Code
-
-For reference, here is the full script that should be deployed:
-
-```javascript
-/**
- * GOOGLE APPS SCRIPT - WEEKLY FEEDBACK HANDLER + REPORT GENERATOR
- * 
- * Handles:
- * 1. AI question generation (POST with action: 'generate')
- * 2. Form submission (POST with action: 'submit')
- * 3. Weekly report generation (POST with action: 'generateReport')
- */
-
-// ========================================
-// CONFIGURATION
-// ========================================
-
-function getConfig() {
-  const props = PropertiesService.getScriptProperties();
-  return {
-    apiKey: props.getProperty('ANTHROPIC_API_KEY'),
-    reportRecipient: props.getProperty('REPORT_RECIPIENT') || Session.getActiveUser().getEmail(),
-    teamSize: parseInt(props.getProperty('TEAM_SIZE')) || 8,
-    reportFolderId: props.getProperty('REPORT_FOLDER_ID') || null
-  };
-}
-
-function getAnthropicApiKey() {
-  return getConfig().apiKey;
-}
-
-// ========================================
-// MAIN REQUEST HANDLER
-// ========================================
-
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action || 'submit';
-    
-    Logger.log('Received action: ' + action);
-    
-    let result;
-    if (action === 'generate') {
-      result = handleGenerateQuestion(data);
-    } else if (action === 'submit') {
-      result = handleSubmitFeedback(data);
-    } else if (action === 'generateReport') {
-      result = handleGenerateReport(data);
-    } else {
-      throw new Error('Unknown action: ' + action);
-    }
-    
-    return result;
-    
-  } catch (error) {
-    Logger.log('Error: ' + error.toString());
-    return ContentService.createTextOutput(JSON.stringify({
-      'status': 'error',
-      'message': error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    'status': 'ok',
-    'message': 'Weekly Feedback API is running'
-  })).setMimeType(ContentService.MimeType.JSON);
-}
-
-// ========================================
-// WEB-TRIGGERED REPORT GENERATION
-// ========================================
-
-function handleGenerateReport(data) {
-  const config = getConfig();
-  const requestedBy = data.requestedBy || 'unknown';
-  
-  Logger.log('Report requested by: ' + requestedBy);
-  
-  const now = new Date();
-  const currentWeek = parseInt(Utilities.formatDate(now, 'Europe/London', 'w'));
-  const currentYear = now.getFullYear();
-  
-  const responses = getResponsesForWeek(currentWeek, currentYear);
-  
-  if (responses.length === 0) {
-    Logger.log('No responses found for week ' + currentWeek);
-    return ContentService.createTextOutput(JSON.stringify({
-      'status': 'no_responses',
-      'message': 'No responses found for this week'
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-  
-  Logger.log('Found ' + responses.length + ' responses for week ' + currentWeek);
-  
-  const aiAnalysis = generateAIAnalysis(responses, config);
-  const docUrl = createReportDocForWeek(responses, aiAnalysis, config, currentWeek, currentYear);
-  
-  Logger.log('Report generated: ' + docUrl);
-  
-  return ContentService.createTextOutput(JSON.stringify({
-    'status': 'success',
-    'docUrl': docUrl,
-    'responseCount': responses.length,
-    'week': currentWeek,
-    'year': currentYear
-  })).setMimeType(ContentService.MimeType.JSON);
-}
-
-// ... (additional functions for AI generation, form submission, etc.)
-// See google-apps-script.js for complete code
-```
-
 ---
 
-## 🚀 Deployment Checklist
+## Deployment Checklist
 
 ### Frontend (GitHub Pages)
 
@@ -497,10 +273,10 @@ function handleGenerateReport(data) {
 2. GitHub Pages auto-deploys from main branch
 3. **Cache busting**: Update version strings in `index.html`:
    ```html
-   <link rel="stylesheet" href="styles.css?v=1.7">
-   <script src="config.js?v=1.7"></script>
-   <script src="questions.js?v=1.7"></script>
-   <script src="app.js?v=1.7"></script>
+   <link rel="stylesheet" href="styles.css?v=1.9">
+   <script src="config.js?v=1.9"></script>
+   <script src="questions.js?v=1.9"></script>
+   <script src="app.js?v=1.9"></script>
    ```
 
 ### Backend (Google Apps Script)
@@ -512,7 +288,7 @@ function handleGenerateReport(data) {
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Test Apps Script Locally
 
@@ -525,23 +301,6 @@ In Apps Script editor, use these test functions:
 | `testGenerateReportAction()` | Test report generation via doPost |
 | `testAIAnalysis()` | Test AI analysis with sample data |
 
-Add this test function to verify report generation:
-```javascript
-function testGenerateReportAction() {
-  const mockEvent = {
-    postData: {
-      contents: JSON.stringify({
-        action: 'generateReport',
-        requestedBy: 'aaron@kubapay.com'
-      })
-    }
-  };
-  
-  const result = doPost(mockEvent);
-  Logger.log('Response: ' + result.getContent());
-}
-```
-
 ### Test Frontend
 
 1. Open browser DevTools (Safari: ⌥⌘I)
@@ -551,27 +310,60 @@ function testGenerateReportAction() {
 
 ---
 
-## 📅 Version History
+## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.9 | 2026-01-29 | **FedCM compliance**: Removed deprecated prompt notification methods (`isNotDisplayed()`, `isSkippedMoment()`, `isDismissedMoment()`). Fixed avatar 404 error. Simplified OAuth config. |
+| v1.8 | 2026-01-29 | **Major fix**: Aligned field names between HTML and JS (accomplishments, blockers, priorities, aiFollowUp). Fixed button onclick parameters. Cleaned up unused AI suggestion buttons. |
 | v1.7 | 2026-01-29 | Fixed: hint selector, FEEDBACK_CONFIG references, debug logging |
 | v1.6 | 2026-01-29 | Added FedCM authentication for mobile caching fix |
 | v1.5 | 2026-01-23 | Added admin panel, session persistence, report generation |
 
 ---
 
-## 🔜 Next Steps / TODO
+## Development Notes
 
-1. **Deploy updated app.js** with the 3 fixes (selector, config references)
-2. **Resolve field name mismatch** between index.html and questions.js
-3. **Test full flow** with actual feedback submission
-4. **Verify report generation** works when there are responses
-5. Consider adding error handling UI for edge cases
+### Important Lessons Learned
+
+1. **Field IDs must match across files** - HTML element IDs must match the field names expected by JavaScript (accomplishments, blockers, priorities, aiFollowUp)
+
+2. **Variable scope matters** - `const CONFIG = {...}` in config.js is NOT globally accessible. Only `window.FEEDBACK_CONFIG` is available in other files.
+
+3. **Button onclick handlers need parameters** - `nextQuestion(1)` not `nextQuestion()`
+
+4. **Apps Script deployment ≠ saving** - Must create a "New version" deployment for changes to take effect on the web app URL
+
+5. **Test with real data** - The "no responses" case wasn't obvious until we had no Week 5 data
+
+6. **FedCM Migration** - Google Identity Services is transitioning to FedCM. The prompt notification methods (`isNotDisplayed()`, `isSkippedMoment()`, `isDismissedMoment()`) are deprecated. Just call `google.accounts.id.prompt()` without a callback.
+
+7. **Avoid 404 errors** - Don't set `img.src` to empty string or undefined; check if value exists first
+
+### Code Style Conventions
+
+- Use `FEEDBACK_CONFIG.xxx` to access config (not `CONFIG.xxx`)
+- Use `QUESTIONS.DEFINITIONS[field]` to get question config
+- All functions called from HTML onclick must be on `window` object
+- Field order: accomplishments → blockers → priorities → aiFollowUp
 
 ---
 
-## 📞 Key Contacts
+## Files Ready for Deployment
+
+The following files have been updated and are ready to upload to GitHub:
+
+1. **index.html** - Fixed field IDs, button onclick handlers, removed unused elements
+2. **app.js** - Fixed textarea references, aiAnswer collection, hint updates
+3. **styles.css** - Added navigation button styles, spinner animation
+4. **questions.js** - No changes needed (already correct)
+5. **config.js** - No changes needed
+6. **google-apps-script.js** - Deploy to Google Apps Script (not GitHub)
+7. **README.md** - Updated documentation
+
+---
+
+## Key Contacts
 
 - **Project Owner**: Aaron (aaron@kubapay.com)
 - **Hosted On**: GitHub Pages (veryaaron/weekly repository)
@@ -579,44 +371,10 @@ function testGenerateReportAction() {
 
 ---
 
-## 🗂️ Related Resources
+## Related Resources
 
 - **Google Cloud Console**: OAuth credentials management
 - **Google Apps Script**: https://script.google.com/
 - **Google Sheets**: Stores feedback responses
 - **Google Drive**: Weekly report folder (ID: `19kPZPciOyTDDyY2kl7aqHwYSvL4k6xcJ`)
 - **Anthropic Console**: Claude API key management
-
----
-
-## 💡 Development Notes
-
-### Important Lessons Learned
-
-1. **Always review existing code before making changes** - Don't rewrite functions without checking how they currently work
-
-2. **Variable scope matters** - `const CONFIG = {...}` in config.js is NOT globally accessible. Only `window.FEEDBACK_CONFIG` is available in other files.
-
-3. **CSS selectors must match HTML** - The app.js was looking for `.question-hint` but HTML uses `.hint`
-
-4. **Apps Script deployment ≠ saving** - Must create a "New version" deployment for changes to take effect on the web app URL
-
-5. **Test with real data** - The "no responses" case wasn't obvious until we had no Week 5 data
-
-### Code Style Conventions
-
-- Use `FEEDBACK_CONFIG.xxx` to access config (not `CONFIG.xxx`)
-- Use `QUESTIONS.DEFINITIONS[field]` to get question config (not `QUESTIONS.get()`)
-- All functions called from HTML onclick must be on `window` object
-
----
-
-## 📋 Files Ready for Deployment
-
-The following files have been prepared with fixes and are ready to upload to GitHub:
-
-1. **app.js** - Contains all 3 bug fixes + debug logging
-2. **google-apps-script.js** - Complete backend script (deploy to Google Apps Script, not GitHub)
-3. **README.md** - This documentation file
-
-Upload app.js to GitHub and update the version string in index.html from `?v=1.6` to `?v=1.7` to bust browser cache.

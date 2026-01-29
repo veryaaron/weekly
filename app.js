@@ -1,11 +1,18 @@
 /**
  * APP.JS
  * ======
- * 
+ *
  * Main application logic for Weekly Feedback Form
- * 
- * v1.6 - FedCM Authentication Fix
- * Only change: Updated initializeGoogleSignIn() to use FedCM for better mobile caching
+ *
+ * v1.9 - FedCM Migration & OAuth Cleanup
+ * - Removed deprecated prompt notification methods (FedCM compliance)
+ * - Fixed avatar 404 error when user has no picture
+ * - Simplified OAuth flow for better reliability
+ *
+ * v1.8 - Field Name Alignment & Bug Fixes
+ * - Fixed field IDs to match HTML (accomplishments, blockers, priorities, aiFollowUp)
+ * - Fixed aiAnswer collection to use correct textarea ID
+ * - Improved hint updates with correct element IDs
  */
 
 // ========================================
@@ -48,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, checking dependencies...');
     console.log('window.FEEDBACK_CONFIG:', typeof window.FEEDBACK_CONFIG);
     console.log('window.QUESTIONS:', typeof window.QUESTIONS);
-    
+
     // Verify config and questions loaded
     if (!window.FEEDBACK_CONFIG) {
         console.error('FEEDBACK_CONFIG not loaded!');
@@ -59,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         return;
     }
-    
+
     if (!window.QUESTIONS) {
         console.error('QUESTIONS not loaded!');
         console.error('Check if questions.js is accessible at: ' + window.location.origin + '/questions.js');
@@ -71,22 +78,28 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         return;
     }
-    
+
     console.log('Config loaded successfully:', window.FEEDBACK_CONFIG.ALLOWED_DOMAINS);
     console.log('Questions loaded:', QUESTIONS.getOrder());
-    
-    // Initialize textareas
+
+    // Initialize textareas - map to actual HTML element IDs
     const fields = QUESTIONS.getOrder();
     fields.forEach(field => {
-        textareas[field] = document.getElementById(field);
+        const element = document.getElementById(field);
+        if (element) {
+            textareas[field] = element;
+            console.log('Textarea found for:', field);
+        } else {
+            console.warn('Textarea NOT found for:', field);
+        }
     });
-    
+
     // Setup character counters
     setupCharacterCounters();
-    
+
     // Setup form submission handler
     document.getElementById('feedbackForm').addEventListener('submit', handleFormSubmit);
-    
+
     // Check for existing session before initializing Google Sign-In
     checkExistingSession();
 });
@@ -97,19 +110,19 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkExistingSession() {
     try {
         const savedSession = sessionStorage.getItem('feedbackUserSession');
-        
+
         if (savedSession) {
             const session = JSON.parse(savedSession);
             const now = Date.now();
-            
+
             // Session valid for 1 hour
             if (session.timestamp && (now - session.timestamp) < 3600000) {
                 console.log('Found valid session for:', session.email);
-                
+
                 // Restore user data
                 currentUser = session.email;
                 currentUserData = session.userData;
-                
+
                 // Show the form directly
                 showFormForAuthenticatedUser();
                 return;
@@ -121,7 +134,7 @@ function checkExistingSession() {
     } catch (e) {
         console.log('No valid session found:', e);
     }
-    
+
     // No valid session, initialize Google Sign-In
     initializeGoogleSignIn();
 }
@@ -161,26 +174,30 @@ function showFormForAuthenticatedUser() {
     // Hide loading
     const loadingEl = document.getElementById('signinLoading');
     if (loadingEl) loadingEl.style.display = 'none';
-    
+
     // Show form, hide auth
     document.getElementById('authCard').style.display = 'none';
     document.getElementById('formCard').classList.add('active');
-    
+
     // Show sign-out button at bottom
     const signoutContainer = document.getElementById('signoutContainer');
     if (signoutContainer) signoutContainer.classList.add('active');
-    
+
     // Check if user is admin and show admin panel
     checkAndShowAdminPanel();
-    
+
     // Populate hidden user info elements (for JS reference)
     document.getElementById('userName').textContent = currentUserData.name;
     document.getElementById('userEmail').textContent = currentUserData.email;
-    document.getElementById('userAvatar').src = currentUserData.picture || '';
-    
+    // v1.9: Only set avatar src if picture exists to avoid 404 errors
+    const avatarEl = document.getElementById('userAvatar');
+    if (avatarEl && currentUserData.picture) {
+        avatarEl.src = currentUserData.picture;
+    }
+
     // Set all dynamic hints
     updateQuestionHints();
-    
+
     // Reset to first question
     currentQuestion = 1;
     updateProgress();
@@ -188,44 +205,48 @@ function showFormForAuthenticatedUser() {
 
 /**
  * Initialize Google Sign-In with FedCM
- * 
+ *
+ * v1.9 CHANGE: Removed deprecated prompt notification methods for FedCM compliance.
+ * The methods isNotDisplayed(), isSkippedMoment(), isDismissedMoment() and their
+ * corresponding getReason() methods are deprecated and will stop working when
+ * FedCM becomes mandatory.
+ *
  * v1.6 CHANGE: Enabled FedCM (Federated Credential Management) for modern auth.
  * FedCM moves credential caching to the browser level, eliminating conflicts
  * with Google's own caching that caused blank pages on mobile.
  */
 function initializeGoogleSignIn() {
     console.log('Initializing Google Sign-In with FedCM...');
-    
+
     if (!window.google || !window.google.accounts) {
         console.log('Google Sign-In library not loaded yet, retrying...');
         setTimeout(initializeGoogleSignIn, 100); // Retry after 100ms
         return;
     }
-    
+
     const clientId = FEEDBACK_CONFIG.GOOGLE_CLIENT_ID;
-    
+
     if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
         hideLoadingShowError('Google Client ID not configured. Please update config.js');
         return;
     }
-    
+
     try {
         // v1.6: Clear any stale Google auth state before initializing
         // This prevents cached credential conflicts that cause blank pages on mobile
         google.accounts.id.disableAutoSelect();
-        
+
         // Initialize Google Identity Services with FedCM enabled
+        // v1.9: Simplified config - removed deprecated options
         google.accounts.id.initialize({
             client_id: clientId,
             callback: handleCredentialResponse,
-            auto_select: false, // v1.6: Disabled - let FedCM handle returning users
+            auto_select: false,
             cancel_on_tap_outside: false,
-            itp_support: true, // Intelligent Tracking Prevention support for Safari/iOS
-            use_fedcm_for_prompt: true, // v1.6: Enabled for modern credential management
-            context: 'signin', // v1.6: Hint to browser about the auth context
-            ux_mode: 'popup' // v1.6: Use popup mode for better mobile handling
+            itp_support: true,
+            use_fedcm_for_prompt: true
         });
-        
+
         // Render the sign-in button
         google.accounts.id.renderButton(
             document.getElementById('g_id_signin'),
@@ -239,32 +260,18 @@ function initializeGoogleSignIn() {
                 width: 280
             }
         );
-        
+
         // Hide loading indicator
         const loadingEl = document.getElementById('signinLoading');
         if (loadingEl) loadingEl.style.display = 'none';
-        
-        // Prompt for FedCM credential selection
-        // This uses the browser's native credential UI instead of Google's redirect
-        google.accounts.id.prompt((notification) => {
-            console.log('FedCM prompt notification:', notification);
-            
-            if (notification.isNotDisplayed()) {
-                const reason = notification.getNotDisplayedReason();
-                console.log('FedCM not displayed. Reason:', reason);
-                // If FedCM isn't supported, the button will still work
-                if (reason === 'browser_not_supported') {
-                    console.log('FedCM not supported in this browser - using button sign-in');
-                }
-            } else if (notification.isSkippedMoment()) {
-                console.log('FedCM skipped. Reason:', notification.getSkippedReason());
-            } else if (notification.isDismissedMoment()) {
-                console.log('FedCM dismissed. Reason:', notification.getDismissedReason());
-            }
-        });
-        
+
+        // v1.9: Simplified prompt call - removed deprecated notification callbacks
+        // The prompt will show the FedCM UI if available, otherwise the button works
+        // We no longer check notification status as those methods are deprecated
+        google.accounts.id.prompt();
+
         console.log('Google Sign-In initialized successfully with FedCM');
-        
+
         // Show help button after 5 seconds in case user has issues
         setTimeout(() => {
             const helpEl = document.getElementById('authHelp');
@@ -274,7 +281,7 @@ function initializeGoogleSignIn() {
                 helpEl.style.display = 'block';
             }
         }, 5000);
-        
+
     } catch (error) {
         console.error('Error initializing Google Sign-In:', error);
         hideLoadingShowError('Error loading sign-in. Please refresh the page.');
@@ -287,10 +294,10 @@ function initializeGoogleSignIn() {
 function hideLoadingShowError(message) {
     const loadingEl = document.getElementById('signinLoading');
     if (loadingEl) loadingEl.style.display = 'none';
-    
+
     const helpEl = document.getElementById('authHelp');
     if (helpEl) helpEl.style.display = 'block';
-    
+
     document.getElementById('authError').innerHTML = `
         <div class="error-message">${message}</div>
     `;
@@ -307,14 +314,14 @@ function hideLoadingShowError(message) {
 function handleCredentialResponse(response) {
     const credential = response.credential;
     const payload = parseJwt(credential);
-    
+
     console.log('Sign-in attempt:', payload.email);
     console.log('Config loaded:', !!window.FEEDBACK_CONFIG);
     console.log('Allowed domains:', window.FEEDBACK_CONFIG?.ALLOWED_DOMAINS);
-    
+
     // Verify email domain
     const allowedDomains = window.FEEDBACK_CONFIG?.ALLOWED_DOMAINS;
-    
+
     // If config not loaded yet, reject (shouldn't happen but safety check)
     if (!allowedDomains) {
         document.getElementById('authError').innerHTML = `
@@ -326,18 +333,18 @@ function handleCredentialResponse(response) {
         console.error('FEEDBACK_CONFIG not loaded');
         return;
     }
-    
+
     // If set to ANY_WORKSPACE, skip domain validation
     // (OAuth consent screen already restricts to Internal workspace users)
     if (allowedDomains !== 'ANY_WORKSPACE') {
         const emailDomain = payload.email.split('@')[1];
         const domains = Array.isArray(allowedDomains) ? allowedDomains : [allowedDomains];
         const isAllowed = domains.some(domain => emailDomain === domain);
-        
+
         console.log('Email domain:', emailDomain);
         console.log('Checking against:', domains);
         console.log('Is allowed:', isAllowed);
-        
+
         if (!isAllowed) {
             document.getElementById('authError').innerHTML = `
                 <div class="error-message">
@@ -360,29 +367,33 @@ function handleCredentialResponse(response) {
         givenName: payload.given_name,
         firstName: payload.given_name || payload.name.split(' ')[0] // Extract first name
     };
-    
+
     // Save session for future visits
     saveSession(currentUser, currentUserData);
-    
+
     // Show form, hide auth
     document.getElementById('authCard').style.display = 'none';
     document.getElementById('formCard').classList.add('active');
-    
+
     // Populate user info (hidden elements for JS reference)
     document.getElementById('userName').textContent = currentUserData.name;
     document.getElementById('userEmail').textContent = currentUserData.email;
-    document.getElementById('userAvatar').src = currentUserData.picture;
-    
+    // v1.9: Only set avatar src if picture exists to avoid 404 errors
+    const avatarEl = document.getElementById('userAvatar');
+    if (avatarEl && currentUserData.picture) {
+        avatarEl.src = currentUserData.picture;
+    }
+
     // Show sign-out button at bottom
     const signoutContainer = document.getElementById('signoutContainer');
     if (signoutContainer) signoutContainer.classList.add('active');
-    
+
     // Check if user is admin and show admin panel
     checkAndShowAdminPanel();
-    
+
     // Set all dynamic hints
     updateQuestionHints();
-    
+
     // Reset to first question
     currentQuestion = 1;
     updateProgress();
@@ -390,20 +401,26 @@ function handleCredentialResponse(response) {
 
 /**
  * Update all question hints with dynamic content
+ * v1.8: Updated to use correct hint element IDs (hint1, hint2, hint3)
  */
 function updateQuestionHints() {
-    // Update hints for all questions except AI follow-up (which is set dynamically)
+    // Update hints for questions 1-3 (accomplishments, blockers, priorities)
     const questionsToUpdate = ['accomplishments', 'blockers', 'priorities'];
-    
+
     questionsToUpdate.forEach((fieldName, index) => {
         const questionNum = index + 1;
-        const hintElement = document.querySelector(`#question${questionNum} .hint`);
-        
+        // v1.8: Use both possible selectors for backwards compatibility
+        let hintElement = document.getElementById(`hint${questionNum}`);
+        if (!hintElement) {
+            hintElement = document.querySelector(`#question${questionNum} .hint`);
+        }
+
         if (hintElement && QUESTIONS && QUESTIONS.DEFINITIONS) {
             const question = QUESTIONS.DEFINITIONS[fieldName];
             if (question && question.generateHint) {
                 const hintText = question.generateHint(currentUserData, answerCache);
                 hintElement.textContent = hintText;
+                console.log(`Updated hint for Q${questionNum} (${fieldName})`);
             }
         }
     });
@@ -426,29 +443,37 @@ function parseJwt(token) {
  */
 function signOut() {
     google.accounts.id.disableAutoSelect();
-    
+
     // Clear session storage
     clearSession();
-    
+
     currentUser = null;
     currentUserData = null;
     document.getElementById('formCard').classList.remove('active');
     document.getElementById('authCard').style.display = 'block';
     document.getElementById('authError').innerHTML = '';
     document.getElementById('feedbackForm').reset();
-    
+
     // Hide sign-out button
     const signoutContainer = document.getElementById('signoutContainer');
     if (signoutContainer) signoutContainer.classList.remove('active');
-    
+
+    // Hide admin panel
+    const adminCard = document.getElementById('adminCard');
+    if (adminCard) adminCard.style.display = 'none';
+
     // Clear answer cache
     Object.keys(answerCache).forEach(key => delete answerCache[key]);
-    
+
     // Reset to first question
     document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
     document.getElementById('question1').classList.add('active');
     currentQuestion = 1;
     updateProgress();
+
+    // Hide success screen
+    const successScreen = document.getElementById('successScreen');
+    if (successScreen) successScreen.style.display = 'none';
 }
 
 // ========================================
@@ -486,37 +511,44 @@ async function nextQuestion(current) {
     const field = QUESTIONS.getFieldByIndex(current);
     const question = QUESTIONS.DEFINITIONS[field];
     const textarea = textareas[field];
-    
+
+    if (!textarea) {
+        console.error('Textarea not found for field:', field);
+        return;
+    }
+
     if (question.required && !textarea.value.trim()) {
         alert('Please provide an answer before continuing');
         return;
     }
-    
+
     // Cache the answer before moving on
     cacheAnswer(field, textarea.value);
-    
+
     console.log('Moving from question', current, 'to', current + 1);
     console.log('Current cache:', answerCache);
 
     // If moving from question 3, generate AI summary and follow-up
     if (current === 3) {
         const generateBtn = document.getElementById('generateAIBtn');
-        generateBtn.disabled = true;
-        generateBtn.innerHTML = '<span class="loading"></span> Analyzing your answers...';
-        
+        if (generateBtn) {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="loading"></span> Analyzing your answers...';
+        }
+
         console.log('Starting AI generation...');
         console.log('Cached answers:', answerCache);
-        
+
         try {
             // Generate AI summary and follow-up question
             console.log('Calling generateAIFollowUpQuestion...');
             const aiResponse = await window.generateAIFollowUpQuestion(currentUserData, answerCache);
             console.log('AI Response received:', aiResponse);
-            
+
             // Store both summary and question
             answerCache.aiSummary = aiResponse.summary;
             answerCache.aiQuestion = aiResponse.question;
-            
+
             // Update question 4 hint with the AI-generated question
             const hintElement = document.getElementById('aiQuestionHint');
             if (hintElement) {
@@ -525,19 +557,29 @@ async function nextQuestion(current) {
             } else {
                 console.error('Could not find aiQuestionHint element');
             }
-            
-            generateBtn.innerHTML = 'Generate Follow-up Question →';
-            generateBtn.disabled = false;
+
+            if (generateBtn) {
+                generateBtn.innerHTML = 'Generate Follow-up Question →';
+                generateBtn.disabled = false;
+            }
         } catch (error) {
             console.error('Error generating AI question:', error);
             console.error('Error details:', error.message, error.stack);
             const firstName = currentUserData.firstName || currentUserData.name.split(' ')[0];
-            const fallbackQuestion = `Is there anything else important you'd like to discuss ${firstName}?`;
-            document.getElementById('aiQuestionHint').textContent = fallbackQuestion;
+            const fallbackQuestion = `Is there anything else important you'd like to discuss, ${firstName}?`;
+
+            const hintElement = document.getElementById('aiQuestionHint');
+            if (hintElement) {
+                hintElement.textContent = fallbackQuestion;
+            }
+
             answerCache.aiSummary = 'Thank you for your updates.';
             answerCache.aiQuestion = fallbackQuestion;
-            generateBtn.innerHTML = 'Generate Follow-up Question →';
-            generateBtn.disabled = false;
+
+            if (generateBtn) {
+                generateBtn.innerHTML = 'Generate Follow-up Question →';
+                generateBtn.disabled = false;
+            }
         }
     }
 
@@ -545,10 +587,10 @@ async function nextQuestion(current) {
     document.getElementById('question' + current).classList.remove('active');
     currentQuestion = current + 1;
     document.getElementById('question' + currentQuestion).classList.add('active');
-    
+
     // Update hints for dynamic questions
     updateQuestionHints();
-    
+
     updateProgress();
     window.scrollTo(0, 0);
 }
@@ -559,12 +601,14 @@ async function nextQuestion(current) {
 function prevQuestion(current) {
     // Cache current answer before going back
     const field = QUESTIONS.getFieldByIndex(current);
-    cacheAnswer(field, textareas[field].value);
-    
+    if (textareas[field]) {
+        cacheAnswer(field, textareas[field].value);
+    }
+
     document.getElementById('question' + current).classList.remove('active');
     currentQuestion = current - 1;
     document.getElementById('question' + currentQuestion).classList.add('active');
-    
+
     // Restore cached answer for previous question
     const prevField = QUESTIONS.getFieldByIndex(currentQuestion);
     const cachedValue = getCachedAnswer(prevField);
@@ -576,14 +620,11 @@ function prevQuestion(current) {
             counter.textContent = `${cachedValue.length} characters`;
         }
     }
-    
+
     updateProgress();
     window.scrollTo(0, 0);
 }
 
-// ========================================
-// AI SUGGESTIONS
-// ========================================
 // ========================================
 // FORM SUBMISSION
 // ========================================
@@ -593,7 +634,7 @@ function prevQuestion(current) {
  */
 async function handleFormSubmit(e) {
     e.preventDefault();
-    
+
     if (!currentUser) {
         alert(FEEDBACK_CONFIG.ERRORS.notSignedIn);
         return;
@@ -604,29 +645,30 @@ async function handleFormSubmit(e) {
     submitBtn.innerHTML = '<span class="loading"></span> ' + FEEDBACK_CONFIG.TEXT.submitButtonLoading;
 
     // Collect form data
+    // v1.8: Fixed to use correct textarea ID (aiFollowUp)
     const formData = {
         action: 'submit', // Tell Apps Script this is a submission
         timestamp: new Date().toISOString(),
         name: currentUserData.name,
         email: currentUserData.email,
         // The three main answers
-        accomplishments: answerCache.accomplishments || textareas.accomplishments.value,
-        blockers: answerCache.blockers || textareas.blockers.value,
-        priorities: answerCache.priorities || textareas.priorities.value,
+        accomplishments: answerCache.accomplishments || textareas.accomplishments?.value || '',
+        blockers: answerCache.blockers || textareas.blockers?.value || '',
+        priorities: answerCache.priorities || textareas.priorities?.value || '',
         // AI-generated summary and question
         aiSummary: answerCache.aiSummary || '',
         aiQuestion: answerCache.aiQuestion || '',
-        // Answer to the AI-generated question (FIX: correct textarea ID)
-        aiAnswer: textareas.aiGeneratedQuestion ? textareas.aiGeneratedQuestion.value : document.getElementById('aiFollowUp').value
+        // Answer to the AI-generated question
+        aiAnswer: textareas.aiFollowUp?.value || ''
     };
-    
+
     console.log('Submitting form data:', formData);
 
     try {
         console.log('Calling submitToGoogleSheets...');
         await submitToGoogleSheets(formData);
         console.log('Submission successful!');
-        
+
         // Hide form, show success
         document.getElementById('question4').classList.remove('active');
         document.getElementById('successScreen').style.display = 'block';
@@ -651,7 +693,7 @@ async function handleFormSubmit(e) {
 async function submitToGoogleSheets(data) {
     console.log('Submitting to:', FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL);
     console.log('Data being sent:', data);
-    
+
     try {
         // Google Apps Script redirects, so we need to follow redirects
         const response = await fetch(FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL, {
@@ -662,15 +704,15 @@ async function submitToGoogleSheets(data) {
             },
             body: JSON.stringify(data)
         });
-        
+
         console.log('Response status:', response.status);
         console.log('Response type:', response.type);
-        
+
         // Try to read response, but don't fail if we can't
         try {
             const result = await response.json();
             console.log('Response data:', result);
-            
+
             if (result.status === 'error') {
                 throw new Error(result.message || 'Submission failed');
             }
@@ -678,9 +720,9 @@ async function submitToGoogleSheets(data) {
             // If we can't parse response, assume success if status is ok
             console.log('Could not parse response, but request completed');
         }
-        
+
         console.log('Submission successful!');
-        
+
     } catch (error) {
         console.error('Fetch error:', error);
         throw new Error('Submission error: ' + error.message);
@@ -697,16 +739,16 @@ async function submitToGoogleSheets(data) {
 function checkAndShowAdminPanel() {
     const adminEmails = FEEDBACK_CONFIG.ADMIN_EMAILS || [];
     const userEmail = currentUserData?.email?.toLowerCase();
-    
+
     if (!userEmail) return;
-    
+
     const isAdmin = adminEmails.some(email => email.toLowerCase() === userEmail);
-    
+
     const adminCard = document.getElementById('adminCard');
     if (adminCard) {
         adminCard.style.display = isAdmin ? 'block' : 'none';
     }
-    
+
     console.log('Admin check:', userEmail, isAdmin ? '(admin)' : '(not admin)');
 }
 
@@ -716,16 +758,16 @@ function checkAndShowAdminPanel() {
 async function generateReport() {
     const btn = document.getElementById('generateReportBtn');
     const statusEl = document.getElementById('reportStatus');
-    
+
     // Disable button and show loading
     btn.disabled = true;
     btn.innerHTML = '<span class="loading"></span> Generating...';
     statusEl.className = 'loading';
     statusEl.innerHTML = 'Generating report, please wait...';
-    
+
     try {
         const scriptUrl = FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL;
-        
+
         const response = await fetch(scriptUrl, {
             method: 'POST',
             redirect: 'follow',
@@ -737,11 +779,11 @@ async function generateReport() {
                 requestedBy: currentUserData.email
             })
         });
-        
+
         const text = await response.text();
         console.log('Raw response text:', text);
         let result;
-        
+
         try {
             result = JSON.parse(text);
             console.log('Parsed result:', result);
@@ -750,7 +792,7 @@ async function generateReport() {
             console.error('JSON parse error:', e, 'Raw text was:', text);
             throw new Error('Invalid response from server');
         }
-        
+
         if (result.status === 'success') {
             statusEl.className = 'success';
             const reportUrl = result.docUrl || result.reportUrl || result.url;
@@ -762,7 +804,7 @@ async function generateReport() {
         } else {
             throw new Error(result.message || 'Unknown error');
         }
-        
+
     } catch (error) {
         console.error('Report generation error:', error);
         statusEl.className = 'error';
