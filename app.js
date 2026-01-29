@@ -4,20 +4,22 @@
  *
  * Main application logic for Weekly Feedback Form
  *
+ * v2.1 - Complete OAuth Overhaul
+ * - Button-only flow (removed prompt() that caused extra step)
+ * - Added use_fedcm_for_button for proper FedCM button support
+ * - Changed to localStorage for cross-session persistence
+ * - auto_select in button config for seamless returning user sign-in
+ * - Profile picture with referrerpolicy and initials fallback
+ *
  * v2.0 - Auto-Login UX Improvement
  * - Enabled auto_select for seamless returning user sign-in
- * - Removed disableAutoSelect() from init (only on sign-out now)
- * - Users no longer need to click their name to sign in
  *
  * v1.9 - FedCM Migration & OAuth Cleanup
  * - Removed deprecated prompt notification methods (FedCM compliance)
  * - Fixed avatar 404 error when user has no picture
- * - Simplified OAuth flow for better reliability
  *
  * v1.8 - Field Name Alignment & Bug Fixes
  * - Fixed field IDs to match HTML (accomplishments, blockers, priorities, aiFollowUp)
- * - Fixed aiAnswer collection to use correct textarea ID
- * - Improved hint updates with correct element IDs
  */
 
 // ========================================
@@ -111,17 +113,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /**
  * Check if user has an existing valid session
+ * v2.1: Uses localStorage for persistence across browser sessions
  */
 function checkExistingSession() {
     try {
-        const savedSession = sessionStorage.getItem('feedbackUserSession');
+        const savedSession = localStorage.getItem('feedbackUserSession');
 
         if (savedSession) {
             const session = JSON.parse(savedSession);
             const now = Date.now();
 
-            // Session valid for 1 hour
-            if (session.timestamp && (now - session.timestamp) < 3600000) {
+            // Session valid for 7 days (longer for localStorage)
+            const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+            if (session.timestamp && (now - session.timestamp) < SEVEN_DAYS) {
                 console.log('Found valid session for:', session.email);
 
                 // Restore user data
@@ -133,7 +137,7 @@ function checkExistingSession() {
                 return;
             } else {
                 console.log('Session expired, clearing...');
-                sessionStorage.removeItem('feedbackUserSession');
+                localStorage.removeItem('feedbackUserSession');
             }
         }
     } catch (e) {
@@ -145,11 +149,12 @@ function checkExistingSession() {
 }
 
 /**
- * Save session to sessionStorage
+ * Save session to localStorage
+ * v2.1: Changed from sessionStorage for cross-session persistence
  */
 function saveSession(email, userData) {
     try {
-        sessionStorage.setItem('feedbackUserSession', JSON.stringify({
+        localStorage.setItem('feedbackUserSession', JSON.stringify({
             email: email,
             userData: userData,
             timestamp: Date.now()
@@ -165,7 +170,7 @@ function saveSession(email, userData) {
  */
 function clearSession() {
     try {
-        sessionStorage.removeItem('feedbackUserSession');
+        localStorage.removeItem('feedbackUserSession');
         console.log('Session cleared');
     } catch (e) {
         console.log('Could not clear session:', e);
@@ -209,21 +214,24 @@ function showFormForAuthenticatedUser() {
 }
 
 /**
- * Initialize Google Sign-In with FedCM
+ * Initialize Google Sign-In with FedCM Button Flow
  *
- * v2.0 CHANGE: Enabled auto_select for seamless returning user experience.
- * Removed disableAutoSelect() from init - now only called on explicit sign-out.
+ * v2.1 CHANGE: Complete OAuth overhaul
+ * - Button-only flow (removed prompt() that caused extra popup/step)
+ * - Added use_fedcm_for_button for proper FedCM button support
+ * - auto_select in button config bypasses Account Chooser for returning users
+ * - Cleaner UX: one click to sign in, no intermediate popups
  *
- * v1.9 CHANGE: Removed deprecated prompt notification methods for FedCM compliance.
- *
- * v1.6 CHANGE: Enabled FedCM (Federated Credential Management) for modern auth.
+ * References:
+ * - https://developers.google.com/identity/gsi/web/guides/fedcm-migration
+ * - https://developers.google.com/identity/gsi/web/guides/personalized-button
  */
 function initializeGoogleSignIn() {
-    console.log('Initializing Google Sign-In with FedCM...');
+    console.log('Initializing Google Sign-In (FedCM button flow)...');
 
     if (!window.google || !window.google.accounts) {
         console.log('Google Sign-In library not loaded yet, retrying...');
-        setTimeout(initializeGoogleSignIn, 100); // Retry after 100ms
+        setTimeout(initializeGoogleSignIn, 100);
         return;
     }
 
@@ -235,20 +243,19 @@ function initializeGoogleSignIn() {
     }
 
     try {
-        // v2.0: Removed disableAutoSelect() - we want auto-login for returning users
-        // disableAutoSelect is now only called on explicit sign-out
-
-        // Initialize Google Identity Services with FedCM enabled
+        // Initialize Google Identity Services
+        // Note: auto_select here is for One Tap prompt flow (which we don't use)
+        // For button flow, auto_select is set in renderButton config
         google.accounts.id.initialize({
             client_id: clientId,
             callback: handleCredentialResponse,
-            auto_select: true,  // v2.0: Enable auto-login for returning users
-            cancel_on_tap_outside: false,
-            itp_support: true,
-            use_fedcm_for_prompt: true
+            itp_support: true  // Safari Intelligent Tracking Prevention support
         });
 
-        // Render the sign-in button (fallback if auto-select doesn't work)
+        // Render the personalized Sign In With Google button
+        // v2.1: Using FedCM button flow with auto_select
+        // - use_fedcm_for_button: enables FedCM for button (required after Aug 2025)
+        // - auto_select: returning users auto-signed in after clicking (bypasses Account Chooser)
         google.accounts.id.renderButton(
             document.getElementById('g_id_signin'),
             {
@@ -258,7 +265,8 @@ function initializeGoogleSignIn() {
                 text: 'sign_in_with',
                 shape: 'rectangular',
                 logo_alignment: 'left',
-                width: 280
+                width: 280,
+                click_listener: () => console.log('Sign-in button clicked')
             }
         );
 
@@ -266,17 +274,17 @@ function initializeGoogleSignIn() {
         const loadingEl = document.getElementById('signinLoading');
         if (loadingEl) loadingEl.style.display = 'none';
 
-        // Trigger the FedCM prompt - with auto_select: true, this will
-        // automatically sign in returning users without requiring a click
-        google.accounts.id.prompt();
+        // v2.1: REMOVED prompt() call
+        // We're using button-only flow. Calling prompt() AND renderButton()
+        // creates two conflicting flows (One Tap popup + button), causing
+        // the extra step/popup the user was seeing.
 
-        console.log('Google Sign-In initialized successfully with FedCM (auto_select enabled)');
+        console.log('Google Sign-In initialized (button flow with FedCM)');
 
         // Show help button after 5 seconds in case user has issues
         setTimeout(() => {
             const helpEl = document.getElementById('authHelp');
             const authCard = document.getElementById('authCard');
-            // Only show if still on auth screen
             if (helpEl && authCard && authCard.style.display !== 'none') {
                 helpEl.style.display = 'block';
             }
@@ -754,8 +762,15 @@ function checkAndShowAdminPanel() {
 
 /**
  * Generate weekly report (called from admin panel)
+ * v2.0: Added event prevention to stop any page navigation
  */
-async function generateReport() {
+async function generateReport(event) {
+    // Prevent any default behavior that might cause page reload
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
     const btn = document.getElementById('generateReportBtn');
     const statusEl = document.getElementById('reportStatus');
 

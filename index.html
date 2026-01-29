@@ -14,16 +14,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=2.0">
+    <link rel="stylesheet" href="styles.css?v=2.1">
 
     <!-- Configuration (must load first) -->
-    <script src="config.js?v=2.0"></script>
+    <script src="config.js?v=2.1"></script>
 
     <!-- Questions Definition -->
-    <script src="questions.js?v=2.0"></script>
+    <script src="questions.js?v=2.1"></script>
 
     <!-- Application Logic -->
-    <script src="app.js?v=2.0"></script>
+    <script src="app.js?v=2.1"></script>
 </head>
 <body>
     <div class="container">
@@ -48,9 +48,15 @@
                 Loading sign-in...
             </div>
 
-            <!-- Google Sign-In button will be rendered here -->
-            <div id="g_id_onload"></div>
-            <div id="g_id_signin"></div>
+            <!-- Google Sign-In Button Container
+                 v2.1: Using FedCM button flow with auto_select
+                 - data-use_fedcm_for_button: enables FedCM (mandatory after Aug 2025)
+                 - data-auto_select: returning users bypass Account Chooser
+            -->
+            <div id="g_id_signin"
+                 data-use_fedcm_for_button="true"
+                 data-auto_select="true">
+            </div>
 
             <div id="authError"></div>
 
@@ -160,7 +166,7 @@
             <p>Generate a report for the current week's submissions</p>
 
             <div class="admin-controls">
-                <button class="btn-admin" id="generateReportBtn" onclick="generateReport()">
+                <button type="button" class="btn-admin" id="generateReportBtn" onclick="generateReport(event); return false;">
                     Generate Weekly Report
                 </button>
             </div>

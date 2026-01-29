@@ -273,10 +273,10 @@ The Apps Script expects/creates these columns:
 2. GitHub Pages auto-deploys from main branch
 3. **Cache busting**: Update version strings in `index.html`:
    ```html
-   <link rel="stylesheet" href="styles.css?v=1.9">
-   <script src="config.js?v=1.9"></script>
-   <script src="questions.js?v=1.9"></script>
-   <script src="app.js?v=1.9"></script>
+   <link rel="stylesheet" href="styles.css?v=2.1">
+   <script src="config.js?v=2.1"></script>
+   <script src="questions.js?v=2.1"></script>
+   <script src="app.js?v=2.1"></script>
    ```
 
 ### Backend (Google Apps Script)
@@ -314,6 +314,8 @@ In Apps Script editor, use these test functions:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.1 | 2026-01-29 | **Complete OAuth overhaul**: Button-only flow (removed prompt() causing extra step), FedCM button support, localStorage for persistence, auto_select for returning users. |
+| v2.0 | 2026-01-29 | Auto-login UX improvement, enabled auto_select. |
 | v1.9 | 2026-01-29 | **FedCM compliance**: Removed deprecated prompt notification methods (`isNotDisplayed()`, `isSkippedMoment()`, `isDismissedMoment()`). Fixed avatar 404 error. Simplified OAuth config. |
 | v1.8 | 2026-01-29 | **Major fix**: Aligned field names between HTML and JS (accomplishments, blockers, priorities, aiFollowUp). Fixed button onclick parameters. Cleaned up unused AI suggestion buttons. |
 | v1.7 | 2026-01-29 | Fixed: hint selector, FEEDBACK_CONFIG references, debug logging |
