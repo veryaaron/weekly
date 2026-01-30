@@ -18,7 +18,7 @@ const CONFIG = {
     //   ALLOWED_DOMAINS: ['kubapay.com', 'anotherdomain.com']
     // Option 3: Any domain in your Google Workspace (OAuth restricts to Internal already)
     //   ALLOWED_DOMAINS: 'ANY_WORKSPACE'
-    ALLOWED_DOMAINS: ['kubapay.com', 'vixtechnology.com'],
+    ALLOWED_DOMAINS: ['kubapay.com', 'vixtechnology.com', 'voqa.com'],
     
     // Admin users who can generate reports
     // These users will see the "Manager Tools" panel after signing in
