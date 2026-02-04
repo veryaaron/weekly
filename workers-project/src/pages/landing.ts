@@ -1,8 +1,5 @@
 /**
- * Tools Landing Page
- *
- * Main entry point for tools.kubagroup.com
- * Lists all available internal tools
+ * Tools Landing Page - Clean Design v2.4
  */
 
 export function getLandingPage(): Response {
@@ -14,145 +11,110 @@ export function getLandingPage(): Response {
     <title>Kuba Tools</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --kuba-navy: #272251;
-            --kuba-yellow: #ffd618;
-            --kuba-coral: #e9426d;
-            --kuba-green: #00a870;
-            --bg-primary: #fafafa;
-            --bg-card: #ffffff;
-            --text-primary: #1a1a2e;
-            --text-secondary: #6b7280;
-            --border-color: #e5e7eb;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            --white: #ffffff;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --brand-navy: #272251;
+            --brand-yellow: #ffd618;
+            --brand-green: #10b981;
+            --radius: 12px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
         }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-primary: #0f0f1a;
-                --bg-card: #1a1a2e;
-                --text-primary: #f8fafc;
-                --text-secondary: #94a3b8;
-                --border-color: #334155;
-                --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            }
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.5;
             min-height: 100vh;
-            padding: 24px;
         }
 
-        .container {
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-100);
+            padding: 16px 24px;
+        }
+
+        .header-content {
             max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 60px;
-            padding-top: 40px;
-        }
-
-        .logo {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: 12px;
         }
 
-        .logo svg {
-            width: 48px;
-            height: 48px;
+        .logo-icon {
+            flex-shrink: 0;
         }
 
-        .logo h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: -0.02em;
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--gray-900);
         }
 
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 1.125rem;
+        .main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            font-size: 16px;
+            color: var(--gray-500);
         }
 
         .tools-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            margin-bottom: 60px;
+            gap: 20px;
         }
 
         .tool-card {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 32px;
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 24px;
             box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
             text-decoration: none;
             color: inherit;
             display: block;
+            transition: box-shadow 0.15s, transform 0.15s;
+            border: 1px solid var(--gray-100);
         }
 
         .tool-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-        }
-
-        .tool-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            margin-bottom: 20px;
-        }
-
-        .tool-icon.weekly {
-            background: linear-gradient(135deg, var(--kuba-navy), #3a3470);
-        }
-
-        .tool-icon.admin {
-            background: linear-gradient(135deg, var(--kuba-yellow), #ffb800);
-        }
-
-        .tool-icon.coming-soon {
-            background: var(--border-color);
-        }
-
-        .tool-card h2 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .tool-card p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            line-height: 1.6;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
         }
 
         .tool-card.disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
@@ -161,110 +123,148 @@ export function getLandingPage(): Response {
             box-shadow: var(--shadow);
         }
 
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-left: 8px;
-            vertical-align: middle;
+        .tool-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
         }
 
-        .badge.new {
-            background: var(--kuba-green);
+        .tool-icon.weekly {
+            background: var(--brand-navy);
             color: white;
         }
 
+        .tool-icon.admin {
+            background: linear-gradient(135deg, var(--brand-yellow), #ffb800);
+        }
+
+        .tool-icon.coming {
+            background: var(--gray-100);
+        }
+
+        .tool-card h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-card p {
+            font-size: 14px;
+            color: var(--gray-500);
+            line-height: 1.5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge.new {
+            background: #d1fae5;
+            color: var(--brand-green);
+        }
+
         .badge.soon {
-            background: var(--border-color);
-            color: var(--text-secondary);
+            background: var(--gray-100);
+            color: var(--gray-500);
         }
 
-        footer {
+        .footer {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 32px 24px;
             text-align: center;
-            padding: 40px 0;
-            border-top: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            font-size: 0.875rem;
+            border-top: 1px solid var(--gray-200);
+            margin-top: 48px;
         }
 
-        footer a {
-            color: var(--kuba-navy);
+        .footer p {
+            font-size: 13px;
+            color: var(--gray-400);
+        }
+
+        .footer a {
+            color: var(--brand-navy);
             text-decoration: none;
         }
 
-        @media (prefers-color-scheme: dark) {
-            footer a {
-                color: var(--kuba-yellow);
-            }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Kuba brand accent - subtle yellow line */
+        .brand-accent {
+            height: 3px;
+            background: linear-gradient(90deg, var(--brand-yellow), transparent);
+            width: 60px;
         }
 
         @media (max-width: 640px) {
-            .logo h1 {
-                font-size: 2rem;
-            }
-
-            .tools-grid {
-                grid-template-columns: 1fr;
-            }
+            .hero h1 { font-size: 26px; }
+            .tools-grid { grid-template-columns: 1fr; }
+            .main { padding: 32px 16px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <svg viewBox="0 0 48 48" fill="none">
-                    <path d="M0 48 Q24 48 24 24 Q24 0 48 0" stroke="#ffd618" stroke-width="5" fill="none"/>
-                </svg>
-                <h1>Kuba Tools</h1>
-            </div>
-            <p class="subtitle">Internal tools for the Kuba team</p>
-        </header>
+    <header class="header">
+        <div class="header-content">
+            <svg class="logo-icon" viewBox="0 0 32 32" width="32" height="32">
+                <path d="M0 32 Q16 32 16 16 Q16 0 32 0" fill="none" stroke="#ffd618" stroke-width="3"/>
+            </svg>
+            <span class="logo-text">Kuba Tools</span>
+        </div>
+    </header>
 
-        <div class="tools-grid">
-            <!-- Weekly Report -->
-            <a href="/weekly" class="tool-card">
-                <div class="tool-icon weekly">
-                    <span style="color: white;">📋</span>
-                </div>
-                <h2>Weekly Report <span class="badge new">v2.2</span></h2>
-                <p>Submit your weekly accomplishments, blockers, and priorities. AI-powered follow-up questions and progress tracking.</p>
-            </a>
-
-            <!-- Admin Dashboard -->
-            <a href="/admin" class="tool-card">
-                <div class="tool-icon admin">
-                    <span>📊</span>
-                </div>
-                <h2>Admin Dashboard</h2>
-                <p>Generate weekly reports, view submission status, and manage team updates. Admin access required.</p>
-            </a>
-
-            <!-- Coming Soon: Expenses -->
-            <div class="tool-card disabled">
-                <div class="tool-icon coming-soon">
-                    <span>💰</span>
-                </div>
-                <h2>Expense Tracker <span class="badge soon">Coming Soon</span></h2>
-                <p>Track and submit expenses, attach receipts, and get approvals faster.</p>
-            </div>
-
-            <!-- Coming Soon: Time Off -->
-            <div class="tool-card disabled">
-                <div class="tool-icon coming-soon">
-                    <span>🏖️</span>
-                </div>
-                <h2>Time Off Requests <span class="badge soon">Coming Soon</span></h2>
-                <p>Request time off, view team calendars, and manage leave balances.</p>
-            </div>
+    <main class="main">
+        <div class="hero">
+            <div class="brand-accent" style="margin: 0 auto 16px;"></div>
+            <h1>Internal Tools</h1>
+            <p>Quick access to team resources</p>
         </div>
 
-        <footer>
-            <p>Kuba Group Internal Tools &middot; <a href="mailto:support@kubapay.com">Need Help?</a></p>
-        </footer>
-    </div>
+        <div class="tools-grid">
+            <a href="/weekly" class="tool-card">
+                <div class="tool-icon weekly">📋</div>
+                <h2>Weekly Feedback <span class="badge new">v2.4</span></h2>
+                <p>Submit your weekly accomplishments, blockers, and priorities with AI-powered follow-ups.</p>
+            </a>
+
+            <a href="/admin" class="tool-card">
+                <div class="tool-icon admin">⚙️</div>
+                <h2>Admin Dashboard</h2>
+                <p>Manage weekly emails, view responses, generate reports, and send reminders.</p>
+            </a>
+
+            <div class="tool-card disabled">
+                <div class="tool-icon coming">💰</div>
+                <h2>Expenses <span class="badge soon">Soon</span></h2>
+                <p>Track and submit expenses with receipt uploads.</p>
+            </div>
+
+            <div class="tool-card disabled">
+                <div class="tool-icon coming">🏖️</div>
+                <h2>Time Off <span class="badge soon">Soon</span></h2>
+                <p>Request time off and view team calendars.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Kuba Group · <a href="mailto:support@kubapay.com">Need help?</a></p>
+    </footer>
 </body>
 </html>`;
 

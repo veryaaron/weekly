@@ -724,19 +724,28 @@ function updateProgress() {
 
 /**
  * Reset form to start (called when clicking header)
- * v2.3: New function for clickable header navigation
+ * v2.4: Fixed to work with display-based visibility
  */
 function resetToStart() {
-    // Only reset if user is authenticated and form is visible
     const formCard = document.getElementById('formCard');
-    if (!formCard || !formCard.classList.contains('active')) {
-        return; // Not authenticated, do nothing
+    const authCard = document.getElementById('authCard');
+
+    // If on auth screen, go back to tools page
+    if (authCard && authCard.style.display !== 'none') {
+        window.location.href = '/';
+        return;
     }
 
-    // If on success screen, reload the page
+    // If form not visible, go to tools page
+    if (!formCard || formCard.style.display === 'none') {
+        window.location.href = '/';
+        return;
+    }
+
+    // If on success screen, reload to start fresh
     const successScreen = document.getElementById('successScreen');
     if (successScreen && successScreen.style.display !== 'none') {
-        location.reload();
+        window.location.href = '/weekly';
         return;
     }
 
