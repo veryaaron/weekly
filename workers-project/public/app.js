@@ -4,6 +4,11 @@
  *
  * Main application logic for Weekly Feedback Form
  *
+ * v2.3 - UX Refresh
+ * - Enhanced progress bar with "Question X of Y" display
+ * - Clickable header to reset/return to start
+ * - Better mobile support
+ *
  * v2.2 - Seamless Auto-Login for Returning Users
  * - Restored prompt() with auto_select: true for automatic sign-in
  * - Hybrid flow: auto-login attempt first, button fallback
@@ -699,15 +704,47 @@ function setupCharacterCounters() {
 
 /**
  * Update progress bar based on current question
- * v2.2: Uses visible question order for accurate progress
+ * v2.3: Enhanced with question count display
  */
 function updateProgress() {
     const visibleOrder = getVisibleQuestionOrder();
     const currentIndex = visibleOrder.indexOf(currentQuestion);
     const totalQuestions = visibleOrder.length;
+    const currentNum = currentIndex + 1;
 
-    const progress = ((currentIndex + 1) / totalQuestions) * 100;
+    // Update progress bar width
+    const progress = (currentNum / totalQuestions) * 100;
     document.getElementById('progressBar').style.width = progress + '%';
+
+    // Update progress count text
+    const progressCount = document.getElementById('progressCount');
+    if (progressCount) {
+        progressCount.textContent = `Question ${currentNum} of ${totalQuestions}`;
+    }
+}
+
+/**
+ * Reset form to start (called when clicking header)
+ * v2.3: New function for clickable header navigation
+ */
+function resetToStart() {
+    // Only reset if user is authenticated and form is visible
+    const formCard = document.getElementById('formCard');
+    if (!formCard || !formCard.classList.contains('active')) {
+        return; // Not authenticated, do nothing
+    }
+
+    // If on success screen, reload the page
+    const successScreen = document.getElementById('successScreen');
+    if (successScreen && successScreen.style.display !== 'none') {
+        location.reload();
+        return;
+    }
+
+    // Reset to first question
+    showQuestion('accomplishments');
+    updateProgress();
+    window.scrollTo(0, 0);
 }
 
 /**
@@ -1062,6 +1099,7 @@ window.signOut = signOut;
 window.nextQuestion = nextQuestion;
 window.prevQuestion = prevQuestion;
 window.generateReport = generateReport;
+window.resetToStart = resetToStart;
 
 // Expose answer cache for use in dynamic question generation
 window.getAnswerCache = () => answerCache;

@@ -14,27 +14,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=2.2">
+    <link rel="stylesheet" href="styles.css?v=2.3">
 
     <!-- Configuration (must load first) -->
-    <script src="config.js?v=2.2"></script>
+    <script src="config.js?v=2.3"></script>
 
     <!-- Questions Definition -->
-    <script src="questions.js?v=2.2"></script>
+    <script src="questions.js?v=2.3"></script>
 
     <!-- Application Logic -->
-    <script src="app.js?v=2.2"></script>
+    <script src="app.js?v=2.3"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        <!-- Header - Clickable to return home/reset -->
         <header class="header">
-            <div class="logo">
+            <a href="#" class="logo" onclick="resetToStart(); return false;" title="Return to start">
                 <svg class="kurve" viewBox="0 0 40 40" width="40" height="40">
                     <path d="M0 40 Q20 40 20 20 Q20 0 40 0" fill="none" stroke="#ffd618" stroke-width="4"/>
                 </svg>
                 <h1>Weekly Feedback</h1>
-            </div>
+            </a>
             <p class="subtitle">Share your week's highlights, challenges, and priorities</p>
         </header>
 
@@ -68,7 +68,13 @@
         <div class="form-card" id="formCard">
             <form id="feedbackForm">
                 <div class="progress-container">
-                    <div class="progress-bar" id="progressBar"></div>
+                    <div class="progress-header">
+                        <span class="progress-label">Your progress</span>
+                        <span class="progress-count" id="progressCount">Question 1 of 6</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
                 </div>
 
                 <div class="questions-container">
@@ -189,7 +195,8 @@
                     <!-- Success Screen -->
                     <div class="success-screen" id="successScreen" style="display: none;">
                         <div class="success-message">
-                            <h3>✓ Feedback Submitted!</h3>
+                            <div class="success-icon">✓</div>
+                            <h3>Feedback Submitted!</h3>
                             <p>Thank you for sharing your weekly update. Your manager will review this shortly.</p>
                         </div>
                     </div>
