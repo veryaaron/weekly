@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Team Feedback</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Weekly Feedback</title>
 
     <!-- Google Sign-In -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -11,220 +11,216 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=2.3">
+    <link rel="stylesheet" href="styles.css?v=2.4">
 
-    <!-- Configuration (must load first) -->
-    <script src="config.js?v=2.3"></script>
-
-    <!-- Questions Definition -->
-    <script src="questions.js?v=2.3"></script>
-
-    <!-- Application Logic -->
-    <script src="app.js?v=2.3"></script>
+    <!-- Configuration -->
+    <script src="config.js?v=2.4"></script>
+    <script src="questions.js?v=2.4"></script>
+    <script src="app.js?v=2.4"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Header - Clickable to return home/reset -->
+    <div class="app">
+        <!-- Header -->
         <header class="header">
             <a href="#" class="logo" onclick="resetToStart(); return false;" title="Return to start">
-                <svg class="kurve" viewBox="0 0 40 40" width="40" height="40">
-                    <path d="M0 40 Q20 40 20 20 Q20 0 40 0" fill="none" stroke="#ffd618" stroke-width="4"/>
+                <svg class="logo-icon" viewBox="0 0 32 32" width="32" height="32">
+                    <path d="M0 32 Q16 32 16 16 Q16 0 32 0" fill="none" stroke="#ffd618" stroke-width="3"/>
                 </svg>
-                <h1>Weekly Feedback</h1>
+                <span class="logo-text">Weekly Feedback</span>
             </a>
-            <p class="subtitle">Share your week's highlights, challenges, and priorities</p>
+            <!-- Admin gear icon - only shown for admins via JS -->
+            <button class="admin-toggle" id="adminToggle" onclick="toggleAdminPanel()" title="Admin Tools" style="display: none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                </svg>
+            </button>
         </header>
 
-        <!-- Auth Card -->
-        <div class="auth-card" id="authCard">
-            <h2>🔐 Team Access</h2>
-            <p>Please sign in with your company Google account</p>
-
-            <div id="signinLoading" class="signin-loading">
-                <span class="spinner"></span>
-                Loading sign-in...
-            </div>
-
-            <!-- Google Sign-In Button Container
-                 v2.2: Hybrid auto-login flow
-                 - Prompt with auto_select attempts to auto-sign in returning users
-                 - Button is fallback for new users or when auto-select unavailable
-                 - FedCM compliant for post-Aug 2025 requirements
-            -->
-            <div id="g_id_signin"></div>
-
-            <div id="authError"></div>
-
-            <div id="authHelp" class="auth-help" style="display: none;">
-                <p>Having trouble signing in?</p>
-                <button class="btn-refresh" onclick="location.reload()">🔄 Refresh Page</button>
-            </div>
-        </div>
-
-        <!-- Form Card -->
-        <div class="form-card" id="formCard">
-            <form id="feedbackForm">
-                <div class="progress-container">
-                    <div class="progress-header">
-                        <span class="progress-label">Your progress</span>
-                        <span class="progress-count" id="progressCount">Question 1 of 6</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-bar" id="progressBar"></div>
-                    </div>
-                </div>
-
-                <div class="questions-container">
-                    <!-- Question 1: Accomplishments -->
-                    <div class="question active" id="questionAccomplishments">
-                        <label class="question-label" for="accomplishments">Key Accomplishments This Week</label>
-                        <p class="hint" id="hintAccomplishments">What significant progress did you or your team make this week?</p>
-                        <textarea
-                            id="accomplishments"
-                            name="accomplishments"
-                            rows="5"
-                            maxlength="2000"
-                            placeholder="e.g., Shipped the new dashboard feature, closed 3 sales deals, completed user interviews..."
-                            required
-                        ></textarea>
-                        <p class="char-count" id="accomplishmentsCount">0 characters</p>
-                        <div class="nav-buttons">
-                            <button type="button" class="btn-next" onclick="nextQuestion('accomplishments')">Continue →</button>
-                        </div>
-                    </div>
-
-                    <!-- Question 2: Previous Week Progress (v2.2 - shown via navigation if previous data exists) -->
-                    <div class="question" id="questionPreviousWeekProgress">
-                        <label class="question-label" for="previousWeekProgress">Progress on Last Week's Priorities</label>
-                        <div class="previous-week-summary" id="previousWeekSummary">
-                            <!-- Will be populated dynamically with last week's data -->
-                        </div>
-                        <p class="hint" id="hintPreviousWeekProgress">How did you progress on last week's priorities?</p>
-                        <textarea
-                            id="previousWeekProgress"
-                            name="previousWeekProgress"
-                            rows="5"
-                            maxlength="2000"
-                            placeholder="e.g., Completed the API integration, still working on the documentation, had to deprioritize the testing..."
-                        ></textarea>
-                        <p class="char-count" id="previousWeekProgressCount">0 characters</p>
-                        <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion('previousWeekProgress')">← Back</button>
-                            <button type="button" class="btn-next" onclick="nextQuestion('previousWeekProgress')">Continue →</button>
-                        </div>
-                    </div>
-
-                    <!-- Question 3: Blockers -->
-                    <div class="question" id="questionBlockers">
-                        <label class="question-label" for="blockers">Blockers & Challenges</label>
-                        <p class="hint" id="hintBlockers">What is currently blocking your path? What support or resources do you need?</p>
-                        <textarea
-                            id="blockers"
-                            name="blockers"
-                            rows="5"
-                            maxlength="2000"
-                            placeholder="e.g., Waiting on API access, need budget approval, struggling with the new framework..."
-                            required
-                        ></textarea>
-                        <p class="char-count" id="blockersCount">0 characters</p>
-                        <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion('blockers')">← Back</button>
-                            <button type="button" class="btn-next" onclick="nextQuestion('blockers')">Continue →</button>
-                        </div>
-                    </div>
-
-                    <!-- Question 4: Priorities -->
-                    <div class="question" id="questionPriorities">
-                        <label class="question-label" for="priorities">Priorities</label>
-                        <p class="hint" id="hintPriorities">What are your current priorities and are you happy this is the right priority list for the business?</p>
-                        <textarea
-                            id="priorities"
-                            name="priorities"
-                            rows="5"
-                            maxlength="2000"
-                            placeholder="e.g., Launch beta version next week, focus on Q1 revenue targets, complete user research..."
-                            required
-                        ></textarea>
-                        <p class="char-count" id="prioritiesCount">0 characters</p>
-                        <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion('priorities')">← Back</button>
-                            <button type="button" class="btn-next" onclick="nextQuestion('priorities')">Continue →</button>
-                        </div>
-                    </div>
-
-                    <!-- Question 5: Shoutouts (v2.2 NEW - optional) -->
-                    <div class="question" id="questionShoutouts">
-                        <label class="question-label" for="shoutouts">Shoutouts & Recognition</label>
-                        <p class="hint" id="hintShoutouts">Is there anyone you'd like to recognize for great work this week? (Optional)</p>
-                        <textarea
-                            id="shoutouts"
-                            name="shoutouts"
-                            rows="4"
-                            maxlength="1000"
-                            placeholder="e.g., Sarah went above and beyond helping debug the API issue, the marketing team did a great job on the launch..."
-                        ></textarea>
-                        <p class="char-count" id="shoutoutsCount">0 characters</p>
-                        <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion('shoutouts')">← Back</button>
-                            <button type="button" class="btn-next" id="generateAIBtn" onclick="nextQuestion('shoutouts')">Generate Follow-up Question →</button>
-                        </div>
-                    </div>
-
-                    <!-- Question 6: AI-Generated Follow-up -->
-                    <div class="question" id="questionAiFollowUp">
-                        <label class="question-label" for="aiFollowUp">Follow-up Question</label>
-                        <p class="hint" id="aiQuestionHint">Loading your personalized follow-up question...</p>
-                        <textarea
-                            id="aiFollowUp"
-                            name="aiFollowUp"
-                            rows="5"
-                            maxlength="2000"
-                            placeholder="Please provide your answer to the question above..."
-                            required
-                        ></textarea>
-                        <p class="char-count" id="aiFollowUpCount">0 characters</p>
-                        <div class="nav-buttons">
-                            <button type="button" class="btn-back" onclick="prevQuestion('aiFollowUp')">← Back</button>
-                            <button type="submit" class="btn-submit" id="submitBtn">Submit Feedback ✓</button>
-                        </div>
-                    </div>
-
-                    <!-- Success Screen -->
-                    <div class="success-screen" id="successScreen" style="display: none;">
-                        <div class="success-message">
-                            <div class="success-icon">✓</div>
-                            <h3>Feedback Submitted!</h3>
-                            <p>Thank you for sharing your weekly update. Your manager will review this shortly.</p>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Admin Panel (only visible to admins) -->
-        <div class="admin-card" id="adminCard" style="display: none;">
-            <h3>📊 Manager Tools</h3>
-            <p>Generate a report for the current week's submissions</p>
-
-            <div class="admin-controls">
-                <button type="button" class="btn-admin" id="generateReportBtn" onclick="generateReport(event); return false;">
-                    Generate Weekly Report
+        <!-- Admin Panel (slide-down, hidden by default) -->
+        <div class="admin-panel" id="adminPanel">
+            <div class="admin-panel-content">
+                <h3>Manager Tools</h3>
+                <p>Generate the weekly summary report</p>
+                <button type="button" class="btn-admin" id="generateReportBtn" onclick="generateReport(event)">
+                    Generate Report
                 </button>
+                <div id="reportStatus"></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Auth Card -->
+            <div class="card" id="authCard">
+                <div class="card-content auth-content">
+                    <h2>Welcome</h2>
+                    <p>Sign in with your company Google account to submit your weekly feedback.</p>
+
+                    <div id="signinLoading" class="loading-state">
+                        <span class="spinner"></span>
+                        <span>Loading...</span>
+                    </div>
+
+                    <div id="g_id_signin"></div>
+                    <div id="authError"></div>
+
+                    <div id="authHelp" class="auth-help" style="display: none;">
+                        <button class="btn-text" onclick="location.reload()">Having trouble? Refresh page</button>
+                    </div>
+                </div>
             </div>
 
-            <div id="reportStatus"></div>
-        </div>
+            <!-- Form Card -->
+            <div class="card" id="formCard" style="display: none;">
+                <form id="feedbackForm">
+                    <!-- Progress -->
+                    <div class="progress">
+                        <div class="progress-text">
+                            <span id="progressCount">Question 1 of 6</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="progressBar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Questions -->
+                    <div class="questions">
+                        <!-- Q1: Accomplishments -->
+                        <div class="question active" id="questionAccomplishments">
+                            <label class="question-title" for="accomplishments">What did you accomplish this week?</label>
+                            <p class="question-hint" id="hintAccomplishments">Key wins, completed tasks, or progress made</p>
+                            <textarea
+                                id="accomplishments"
+                                name="accomplishments"
+                                placeholder="e.g., Shipped the new dashboard, closed 3 deals, finished user research..."
+                                required
+                            ></textarea>
+                            <div class="question-footer">
+                                <span class="char-count" id="accomplishmentsCount">0 characters</span>
+                            </div>
+                            <div class="question-nav">
+                                <button type="button" class="btn-primary" onclick="nextQuestion('accomplishments')">Continue</button>
+                            </div>
+                        </div>
+
+                        <!-- Q2: Previous Week Progress (conditional) -->
+                        <div class="question" id="questionPreviousWeekProgress">
+                            <label class="question-title" for="previousWeekProgress">How did last week's priorities go?</label>
+                            <div class="previous-week-recall" id="previousWeekSummary"></div>
+                            <p class="question-hint" id="hintPreviousWeekProgress">Update on what you planned to do</p>
+                            <textarea
+                                id="previousWeekProgress"
+                                name="previousWeekProgress"
+                                placeholder="e.g., Completed the API integration, still working on docs..."
+                            ></textarea>
+                            <div class="question-footer">
+                                <span class="char-count" id="previousWeekProgressCount">0 characters</span>
+                            </div>
+                            <div class="question-nav">
+                                <button type="button" class="btn-secondary" onclick="prevQuestion('previousWeekProgress')">Back</button>
+                                <button type="button" class="btn-primary" onclick="nextQuestion('previousWeekProgress')">Continue</button>
+                            </div>
+                        </div>
+
+                        <!-- Q3: Blockers -->
+                        <div class="question" id="questionBlockers">
+                            <label class="question-title" for="blockers">Any blockers or challenges?</label>
+                            <p class="question-hint" id="hintBlockers">What's slowing you down or needs attention</p>
+                            <textarea
+                                id="blockers"
+                                name="blockers"
+                                placeholder="e.g., Waiting on API access, need budget approval..."
+                                required
+                            ></textarea>
+                            <div class="question-footer">
+                                <span class="char-count" id="blockersCount">0 characters</span>
+                            </div>
+                            <div class="question-nav">
+                                <button type="button" class="btn-secondary" onclick="prevQuestion('blockers')">Back</button>
+                                <button type="button" class="btn-primary" onclick="nextQuestion('blockers')">Continue</button>
+                            </div>
+                        </div>
+
+                        <!-- Q4: Priorities -->
+                        <div class="question" id="questionPriorities">
+                            <label class="question-title" for="priorities">What are your priorities next week?</label>
+                            <p class="question-hint" id="hintPriorities">Top focus areas for the coming week</p>
+                            <textarea
+                                id="priorities"
+                                name="priorities"
+                                placeholder="e.g., Launch beta, focus on Q1 targets, complete research..."
+                                required
+                            ></textarea>
+                            <div class="question-footer">
+                                <span class="char-count" id="prioritiesCount">0 characters</span>
+                            </div>
+                            <div class="question-nav">
+                                <button type="button" class="btn-secondary" onclick="prevQuestion('priorities')">Back</button>
+                                <button type="button" class="btn-primary" onclick="nextQuestion('priorities')">Continue</button>
+                            </div>
+                        </div>
+
+                        <!-- Q5: Shoutouts -->
+                        <div class="question" id="questionShoutouts">
+                            <label class="question-title" for="shoutouts">Anyone to recognize this week?</label>
+                            <p class="question-hint" id="hintShoutouts">Give a shoutout to a teammate (optional)</p>
+                            <textarea
+                                id="shoutouts"
+                                name="shoutouts"
+                                placeholder="e.g., Thanks to Sarah for helping debug the API issue..."
+                            ></textarea>
+                            <div class="question-footer">
+                                <span class="char-count" id="shoutoutsCount">0 characters</span>
+                            </div>
+                            <div class="question-nav">
+                                <button type="button" class="btn-secondary" onclick="prevQuestion('shoutouts')">Back</button>
+                                <button type="button" class="btn-primary" id="generateAIBtn" onclick="nextQuestion('shoutouts')">Continue</button>
+                            </div>
+                        </div>
+
+                        <!-- Q6: AI Follow-up -->
+                        <div class="question" id="questionAiFollowUp">
+                            <label class="question-title" for="aiFollowUp">One more thing...</label>
+                            <p class="question-hint" id="aiQuestionHint">Loading your personalized question...</p>
+                            <textarea
+                                id="aiFollowUp"
+                                name="aiFollowUp"
+                                placeholder="Your thoughts..."
+                                required
+                            ></textarea>
+                            <div class="question-footer">
+                                <span class="char-count" id="aiFollowUpCount">0 characters</span>
+                            </div>
+                            <div class="question-nav">
+                                <button type="button" class="btn-secondary" onclick="prevQuestion('aiFollowUp')">Back</button>
+                                <button type="submit" class="btn-primary btn-submit" id="submitBtn">Submit</button>
+                            </div>
+                        </div>
+
+                        <!-- Success -->
+                        <div class="question success-screen" id="successScreen" style="display: none;">
+                            <div class="success-content">
+                                <div class="success-icon">✓</div>
+                                <h2>Thank you!</h2>
+                                <p>Your feedback has been submitted.</p>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Sign out link - subtle, at bottom -->
+                <div class="card-footer">
+                    <button class="btn-text btn-signout" onclick="signOut()">Sign out</button>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Fixed Sign Out Button at Bottom -->
-    <div class="signout-container" id="signoutContainer">
-        <button class="btn-signout" onclick="signOut()">Sign Out</button>
-    </div>
-
-    <!-- Hidden elements for user data (used by JS) -->
+    <!-- Hidden user data elements -->
     <div id="userName" style="display:none;"></div>
     <div id="userEmail" style="display:none;"></div>
     <img id="userAvatar" style="display:none;" src="" alt="">

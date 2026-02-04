@@ -4,6 +4,12 @@
  *
  * Main application logic for Weekly Feedback Form
  *
+ * v2.4 - Clean UX Redesign
+ * - Simplified layout with single-focus design
+ * - Admin tools moved to subtle header icon
+ * - Sign out moved to bottom of card (not fixed footer)
+ * - Cleaner visual hierarchy
+ *
  * v2.3 - UX Refresh
  * - Enhanced progress bar with "Question X of Y" display
  * - Clickable header to reset/return to start
@@ -190,7 +196,7 @@ function clearSession() {
 
 /**
  * Show form for already authenticated user
- * v2.2: Now fetches previous week data for recall feature
+ * v2.4: Simplified for cleaner UI
  */
 async function showFormForAuthenticatedUser() {
     // Hide loading
@@ -199,29 +205,27 @@ async function showFormForAuthenticatedUser() {
 
     // Show form, hide auth
     document.getElementById('authCard').style.display = 'none';
-    document.getElementById('formCard').classList.add('active');
+    document.getElementById('formCard').style.display = 'block';
 
-    // Show sign-out button at bottom
-    const signoutContainer = document.getElementById('signoutContainer');
-    if (signoutContainer) signoutContainer.classList.add('active');
-
-    // Check if user is admin and show admin panel
+    // Check if user is admin and show admin toggle in header
     checkAndShowAdminPanel();
 
     // Populate hidden user info elements (for JS reference)
     document.getElementById('userName').textContent = currentUserData.name;
     document.getElementById('userEmail').textContent = currentUserData.email;
-    // v1.9: Only set avatar src if picture exists to avoid 404 errors
     const avatarEl = document.getElementById('userAvatar');
     if (avatarEl && currentUserData.picture) {
         avatarEl.src = currentUserData.picture;
     }
 
-    // v2.2: Fetch previous week data for recall feature
+    // Fetch previous week data for recall feature
     await fetchPreviousWeekData();
 
-    // Set all dynamic hints (now includes previous week context)
+    // Set all dynamic hints
     updateQuestionHints();
+
+    // Populate previous week summary if available
+    populatePreviousWeekSummary();
 
     // Reset to first question
     currentQuestion = 'accomplishments';
@@ -469,34 +473,29 @@ async function handleCredentialResponse(response) {
 
     // Show form, hide auth
     document.getElementById('authCard').style.display = 'none';
-    document.getElementById('formCard').classList.add('active');
+    document.getElementById('formCard').style.display = 'block';
 
     // Populate user info (hidden elements for JS reference)
     document.getElementById('userName').textContent = currentUserData.name;
     document.getElementById('userEmail').textContent = currentUserData.email;
-    // v1.9: Only set avatar src if picture exists to avoid 404 errors
     const avatarEl = document.getElementById('userAvatar');
     if (avatarEl && currentUserData.picture) {
         avatarEl.src = currentUserData.picture;
     }
 
-    // Show sign-out button at bottom
-    const signoutContainer = document.getElementById('signoutContainer');
-    if (signoutContainer) signoutContainer.classList.add('active');
-
-    // Check if user is admin and show admin panel
+    // Check if user is admin and show admin toggle
     checkAndShowAdminPanel();
 
-    // v2.2: Fetch previous week data for recall feature
+    // Fetch previous week data for recall feature
     await fetchPreviousWeekData();
 
-    // Set all dynamic hints (now includes previous week context)
+    // Set all dynamic hints
     updateQuestionHints();
 
     // Populate previous week summary if available
     populatePreviousWeekSummary();
 
-    // Reset to first question (v2.2: use field name)
+    // Reset to first question
     currentQuestion = 'accomplishments';
     showQuestion('accomplishments');
     updateProgress();
@@ -587,23 +586,23 @@ function signOut() {
 
     currentUser = null;
     currentUserData = null;
-    document.getElementById('formCard').classList.remove('active');
+
+    // Hide form, show auth
+    document.getElementById('formCard').style.display = 'none';
     document.getElementById('authCard').style.display = 'block';
     document.getElementById('authError').innerHTML = '';
     document.getElementById('feedbackForm').reset();
 
-    // Hide sign-out button
-    const signoutContainer = document.getElementById('signoutContainer');
-    if (signoutContainer) signoutContainer.classList.remove('active');
-
-    // Hide admin panel
-    const adminCard = document.getElementById('adminCard');
-    if (adminCard) adminCard.style.display = 'none';
+    // Hide admin toggle and panel
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) adminToggle.style.display = 'none';
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) adminPanel.classList.remove('open');
 
     // Clear answer cache
     Object.keys(answerCache).forEach(key => delete answerCache[key]);
 
-    // Reset to first question (v2.2: use new ID format)
+    // Reset to first question
     document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
     document.getElementById('questionAccomplishments').classList.add('active');
     currentQuestion = 'accomplishments';
@@ -1001,7 +1000,8 @@ async function submitToGoogleSheets(data) {
 // ========================================
 
 /**
- * Check if current user is an admin and show admin panel
+ * Check if current user is an admin and show admin toggle
+ * v2.4: Now shows toggle button in header instead of card
  */
 function checkAndShowAdminPanel() {
     const adminEmails = FEEDBACK_CONFIG.ADMIN_EMAILS || [];
@@ -1011,12 +1011,27 @@ function checkAndShowAdminPanel() {
 
     const isAdmin = adminEmails.some(email => email.toLowerCase() === userEmail);
 
-    const adminCard = document.getElementById('adminCard');
-    if (adminCard) {
-        adminCard.style.display = isAdmin ? 'block' : 'none';
+    // Show/hide admin toggle button in header
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) {
+        adminToggle.style.display = isAdmin ? 'flex' : 'none';
     }
 
     console.log('Admin check:', userEmail, isAdmin ? '(admin)' : '(not admin)');
+}
+
+/**
+ * Toggle the admin panel open/closed
+ * v2.4: New function for slide-down admin panel
+ */
+function toggleAdminPanel() {
+    const panel = document.getElementById('adminPanel');
+    const toggle = document.getElementById('adminToggle');
+
+    if (panel && toggle) {
+        panel.classList.toggle('open');
+        toggle.classList.toggle('active');
+    }
 }
 
 /**
@@ -1085,7 +1100,7 @@ async function generateReport(event) {
         statusEl.innerHTML = '❌ Error generating report: ' + error.message;
     } finally {
         btn.disabled = false;
-        btn.innerHTML = 'Generate Weekly Report';
+        btn.innerHTML = 'Generate Report';
     }
 }
 
@@ -1100,6 +1115,7 @@ window.nextQuestion = nextQuestion;
 window.prevQuestion = prevQuestion;
 window.generateReport = generateReport;
 window.resetToStart = resetToStart;
+window.toggleAdminPanel = toggleAdminPanel;
 
 // Expose answer cache for use in dynamic question generation
 window.getAnswerCache = () => answerCache;
