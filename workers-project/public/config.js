@@ -3,7 +3,7 @@
  * ===================
  *
  * Configuration for Weekly Feedback Form - Cloudflare Workers Deployment
- * v2.2 - Updated for tools.kubapay.workers.dev
+ * v2.2 - Updated for tools.kubagroup.com
  */
 
 const CONFIG = {

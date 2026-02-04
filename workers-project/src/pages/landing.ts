@@ -1,7 +1,7 @@
 /**
  * Tools Landing Page
  *
- * Main entry point for tools.kubapay.workers.dev
+ * Main entry point for tools.kubagroup.com
  * Lists all available internal tools
  */
 

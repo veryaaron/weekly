@@ -1,7 +1,7 @@
 /**
  * Kuba Tools - Cloudflare Worker
  *
- * Main entry point for the tools.kubapay.workers.dev application
+ * Main entry point for tools.kubagroup.com
  * Handles routing between landing page, feedback form, and admin dashboard
  */
 

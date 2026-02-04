@@ -2,17 +2,16 @@ name = "kuba-tools"
 main = "src/index.ts"
 compatibility_date = "2025-02-04"
 
-# Development (tools.kubapay.workers.dev)
+# Staging (kuba-tools-staging.kubapay.workers.dev)
 [env.staging]
 name = "kuba-tools-staging"
 
-# Production (tools.kubagroup.com - when DNS is configured)
+# Production (tools.kubagroup.com)
 [env.production]
 name = "kuba-tools"
-# Uncomment when DNS is ready:
-# routes = [
-#   { pattern = "tools.kubagroup.com/*", zone_name = "kubagroup.com" }
-# ]
+routes = [
+  { pattern = "tools.kubagroup.com/*", zone_name = "kubagroup.com" }
+]
 
 # Static assets
 [site]

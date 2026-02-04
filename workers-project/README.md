@@ -5,7 +5,7 @@ Internal tools for the Kuba team, deployed on Cloudflare Workers.
 ## Live URLs
 
 - **Staging**: https://kuba-tools-staging.kubapay.workers.dev
-- **Production**: https://tools.kubagroup.com (when DNS configured)
+- **Production**: https://tools.kubagroup.com
 
 ## Features
 
@@ -52,11 +52,6 @@ npm run deploy:staging
 
 ### Production (tools.kubagroup.com)
 
-1. Configure DNS in Cloudflare dashboard:
-   - Add CNAME record: `tools` → `kuba-tools.kubapay.workers.dev`
-2. Uncomment routes in `wrangler.toml`
-3. Deploy:
-
 ```bash
 npm run deploy:production
 ```
@@ -97,7 +92,7 @@ To enable Google Sign-In on a new domain:
 2. Edit your OAuth 2.0 Client ID
 3. Add authorized JavaScript origins:
    - `https://kuba-tools-staging.kubapay.workers.dev`
-   - `https://tools.kubagroup.com` (when ready)
+   - `https://tools.kubagroup.com`
 4. Save changes
 
 ### Google Apps Script
