@@ -1,0 +1,26 @@
+name = "kuba-tools"
+main = "src/index.ts"
+compatibility_date = "2025-02-04"
+
+# Development (tools.kubapay.workers.dev)
+[env.staging]
+name = "kuba-tools-staging"
+
+# Production (tools.kubagroup.com - when DNS is configured)
+[env.production]
+name = "kuba-tools"
+# Uncomment when DNS is ready:
+# routes = [
+#   { pattern = "tools.kubagroup.com/*", zone_name = "kubagroup.com" }
+# ]
+
+# Static assets
+[site]
+bucket = "./public"
+
+# Build settings
+[build]
+command = ""
+
+# Environment variables (set via wrangler secret or dashboard)
+# GOOGLE_SCRIPT_URL - Your Google Apps Script deployment URL
