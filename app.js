@@ -219,7 +219,8 @@ async function showFormForAuthenticatedUser() {
     updateQuestionHints();
 
     // Reset to first question
-    currentQuestion = 1;
+    currentQuestion = 'accomplishments';
+    showQuestion('accomplishments');
     updateProgress();
 }
 
@@ -264,21 +265,11 @@ async function fetchPreviousWeekData() {
                 shoutouts: data.data.shoutouts || ''
             };
             console.log('Previous week data loaded:', currentUserData.previousWeek);
-
-            // Show the previous week progress question
-            const progressQuestion = document.getElementById('questionPreviousWeekProgress');
-            if (progressQuestion) {
-                progressQuestion.style.display = 'block';
-            }
+            // Navigation will include previousWeekProgress via getVisibleQuestionOrder()
         } else {
             currentUserData.previousWeek = null;
             console.log('No previous week data found');
-
-            // Hide the previous week progress question if no data
-            const progressQuestion = document.getElementById('questionPreviousWeekProgress');
-            if (progressQuestion) {
-                progressQuestion.style.display = 'none';
-            }
+            // Navigation will skip previousWeekProgress via getVisibleQuestionOrder()
         }
 
     } catch (error) {
@@ -411,7 +402,7 @@ function hideLoadingShowError(message) {
  * Handle Google Sign-In response
  * Called automatically by Google Sign-In button
  */
-function handleCredentialResponse(response) {
+async function handleCredentialResponse(response) {
     const credential = response.credential;
     const payload = parseJwt(credential);
 
@@ -491,8 +482,10 @@ function handleCredentialResponse(response) {
     // Check if user is admin and show admin panel
     checkAndShowAdminPanel();
 
-    // Set all dynamic hints
-    // Update question hints (now includes previous week context)
+    // v2.2: Fetch previous week data for recall feature
+    await fetchPreviousWeekData();
+
+    // Set all dynamic hints (now includes previous week context)
     updateQuestionHints();
 
     // Populate previous week summary if available
@@ -500,6 +493,7 @@ function handleCredentialResponse(response) {
 
     // Reset to first question (v2.2: use field name)
     currentQuestion = 'accomplishments';
+    showQuestion('accomplishments');
     updateProgress();
 }
 
@@ -613,10 +607,6 @@ function signOut() {
     // Hide success screen
     const successScreen = document.getElementById('successScreen');
     if (successScreen) successScreen.style.display = 'none';
-
-    // Hide previous week progress question (will be shown again if data exists on next login)
-    const prevWeekQ = document.getElementById('questionPreviousWeekProgress');
-    if (prevWeekQ) prevWeekQ.style.display = 'none';
 }
 
 // ========================================
@@ -674,6 +664,23 @@ function getQuestionElementId(fieldName) {
     // Convert fieldName to element ID (e.g., 'accomplishments' -> 'questionAccomplishments')
     const capitalizedField = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
     return 'question' + capitalizedField;
+}
+
+/**
+ * Show a specific question by field name, hiding all others
+ */
+function showQuestion(fieldName) {
+    // Hide all questions
+    document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
+
+    // Show the target question
+    const elementId = getQuestionElementId(fieldName);
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.classList.add('active');
+    }
+
+    currentQuestion = fieldName;
 }
 
 /**
