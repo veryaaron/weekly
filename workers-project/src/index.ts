@@ -2,15 +2,16 @@
  * Kuba Tools - Cloudflare Worker
  *
  * Main entry point for tools.kubagroup.com
- * Handles routing between landing page, feedback form, and admin dashboard
+ * Handles routing between landing page, weekly report form, and admin dashboard
  */
 
+import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 import { getLandingPage } from './pages/landing';
 import { getAdminPage } from './pages/admin';
 
 export interface Env {
-  // Environment variables can be added here
-  // GOOGLE_SCRIPT_URL?: string;
+  __STATIC_CONTENT: KVNamespace;
+  __STATIC_CONTENT_MANIFEST: string;
 }
 
 export default {
@@ -35,9 +36,9 @@ export default {
         return getLandingPage();
       }
 
-      // Route: Weekly feedback form
-      if (path === '/feedback' || path === '/feedback/' || path === '/feedback/index.html') {
-        return await serveStaticFile('index.html', request);
+      // Route: Weekly report form
+      if (path === '/weekly' || path === '/weekly/') {
+        return await serveStaticAsset(request, env, ctx, 'index.html');
       }
 
       // Route: Admin dashboard
@@ -45,21 +46,17 @@ export default {
         return getAdminPage();
       }
 
-      // Route: Static assets (CSS, JS, etc.)
-      const staticPaths = [
-        '/app.js',
-        '/config.js',
-        '/questions.js',
-        '/styles.css',
-        '/feedback/app.js',
-        '/feedback/config.js',
-        '/feedback/questions.js',
-        '/feedback/styles.css',
-      ];
+      // Route: Static assets for /weekly (CSS, JS, etc.)
+      if (path.startsWith('/weekly/')) {
+        const filename = path.replace('/weekly/', '');
+        return await serveStaticAsset(request, env, ctx, filename);
+      }
 
-      if (staticPaths.some(p => path.endsWith(p.split('/').pop()!))) {
-        const filename = path.split('/').pop()!;
-        return await serveStaticFile(filename, request);
+      // Route: Root-level static assets (fallback)
+      const staticFiles = ['app.js', 'config.js', 'questions.js', 'styles.css'];
+      const filename = path.replace('/', '');
+      if (staticFiles.includes(filename)) {
+        return await serveStaticAsset(request, env, ctx, filename);
       }
 
       // 404 for everything else
@@ -73,26 +70,33 @@ export default {
 };
 
 /**
- * Serve a static file from the public directory
- * In production, Cloudflare Pages/Workers will serve from the [site] bucket
+ * Serve a static asset from KV storage
  */
-async function serveStaticFile(filename: string, request: Request): Promise<Response> {
-  // This is a placeholder - in production, wrangler handles static assets
-  // For now, we'll redirect to the feedback form assets
+async function serveStaticAsset(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  filename: string
+): Promise<Response> {
+  try {
+    // Create a new request for the specific file
+    const url = new URL(request.url);
+    url.pathname = '/' + filename;
+    const assetRequest = new Request(url.toString(), request);
 
-  const contentTypes: Record<string, string> = {
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.js': 'application/javascript',
-    '.json': 'application/json',
-  };
-
-  const ext = '.' + filename.split('.').pop();
-  const contentType = contentTypes[ext] || 'text/plain';
-
-  // The actual file serving is handled by wrangler's [site] configuration
-  // This function is for development/fallback only
-  return new Response(`File: ${filename}`, {
-    headers: { 'Content-Type': contentType },
-  });
+    return await getAssetFromKV(
+      {
+        request: assetRequest,
+        waitUntil: ctx.waitUntil.bind(ctx),
+      },
+      {
+        ASSET_NAMESPACE: env.__STATIC_CONTENT,
+        ASSET_MANIFEST: JSON.parse(env.__STATIC_CONTENT_MANIFEST),
+      }
+    );
+  } catch (e) {
+    // If asset not found, return 404
+    console.error(`Asset not found: ${filename}`, e);
+    return new Response(`Not Found: ${filename}`, { status: 404 });
+  }
 }

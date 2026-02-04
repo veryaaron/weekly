@@ -127,7 +127,7 @@ export function getLandingPage(): Response {
             margin-bottom: 20px;
         }
 
-        .tool-icon.feedback {
+        .tool-icon.weekly {
             background: linear-gradient(135deg, var(--kuba-navy), #3a3470);
         }
 
@@ -224,12 +224,12 @@ export function getLandingPage(): Response {
         </header>
 
         <div class="tools-grid">
-            <!-- Weekly Feedback -->
-            <a href="/feedback" class="tool-card">
-                <div class="tool-icon feedback">
+            <!-- Weekly Report -->
+            <a href="/weekly" class="tool-card">
+                <div class="tool-icon weekly">
                     <span style="color: white;">📋</span>
                 </div>
-                <h2>Weekly Feedback <span class="badge new">v2.2</span></h2>
+                <h2>Weekly Report <span class="badge new">v2.2</span></h2>
                 <p>Submit your weekly accomplishments, blockers, and priorities. AI-powered follow-up questions and progress tracking.</p>
             </a>
 
@@ -239,7 +239,7 @@ export function getLandingPage(): Response {
                     <span>📊</span>
                 </div>
                 <h2>Admin Dashboard</h2>
-                <p>Generate weekly reports, view submission status, and manage team feedback. Admin access required.</p>
+                <p>Generate weekly reports, view submission status, and manage team updates. Admin access required.</p>
             </a>
 
             <!-- Coming Soon: Expenses -->
