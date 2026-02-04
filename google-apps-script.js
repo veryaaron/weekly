@@ -72,7 +72,9 @@ function getConfig() {
 }
 
 function getAnthropicApiKey() {
-  return getConfig().apiKey;
+  // Get API key directly without going through getConfig()
+  // This avoids Session.getActiveUser() which doesn't work in web request context
+  return PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
 }
 
 // ========================================
