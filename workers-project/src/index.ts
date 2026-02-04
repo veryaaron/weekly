@@ -3,15 +3,14 @@
  *
  * Main entry point for tools.kubagroup.com
  * Handles routing between landing page, weekly report form, and admin dashboard
+ * Static assets (JS, CSS) are served automatically via the assets configuration
  */
 
-import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 import { getLandingPage } from './pages/landing';
 import { getAdminPage } from './pages/admin';
 
 export interface Env {
-  __STATIC_CONTENT: KVNamespace;
-  __STATIC_CONTENT_MANIFEST: string;
+  ASSETS: Fetcher;
 }
 
 export default {
@@ -36,9 +35,11 @@ export default {
         return getLandingPage();
       }
 
-      // Route: Weekly report form
+      // Route: Weekly report form - serve the static index.html
       if (path === '/weekly' || path === '/weekly/') {
-        return await serveStaticAsset(request, env, ctx, 'index.html');
+        // Fetch the index.html from assets
+        const assetUrl = new URL('/index.html', request.url);
+        return env.ASSETS.fetch(new Request(assetUrl, request));
       }
 
       // Route: Admin dashboard
@@ -46,21 +47,16 @@ export default {
         return getAdminPage();
       }
 
-      // Route: Static assets for /weekly (CSS, JS, etc.)
+      // Route: Static assets for /weekly path (rewrite to root)
       if (path.startsWith('/weekly/')) {
-        const filename = path.replace('/weekly/', '');
-        return await serveStaticAsset(request, env, ctx, filename);
+        const filename = path.replace('/weekly/', '/');
+        const assetUrl = new URL(filename, request.url);
+        return env.ASSETS.fetch(new Request(assetUrl, request));
       }
 
-      // Route: Root-level static assets (fallback)
-      const staticFiles = ['app.js', 'config.js', 'questions.js', 'styles.css'];
-      const filename = path.replace('/', '');
-      if (staticFiles.includes(filename)) {
-        return await serveStaticAsset(request, env, ctx, filename);
-      }
-
-      // 404 for everything else
-      return new Response('Not Found', { status: 404 });
+      // Let assets handle other static files (app.js, styles.css, etc.)
+      // This will be handled by Cloudflare's assets automatically
+      return env.ASSETS.fetch(request);
 
     } catch (error) {
       console.error('Error handling request:', error);
@@ -68,35 +64,3 @@ export default {
     }
   },
 };
-
-/**
- * Serve a static asset from KV storage
- */
-async function serveStaticAsset(
-  request: Request,
-  env: Env,
-  ctx: ExecutionContext,
-  filename: string
-): Promise<Response> {
-  try {
-    // Create a new request for the specific file
-    const url = new URL(request.url);
-    url.pathname = '/' + filename;
-    const assetRequest = new Request(url.toString(), request);
-
-    return await getAssetFromKV(
-      {
-        request: assetRequest,
-        waitUntil: ctx.waitUntil.bind(ctx),
-      },
-      {
-        ASSET_NAMESPACE: env.__STATIC_CONTENT,
-        ASSET_MANIFEST: JSON.parse(env.__STATIC_CONTENT_MANIFEST),
-      }
-    );
-  } catch (e) {
-    // If asset not found, return 404
-    console.error(`Asset not found: ${filename}`, e);
-    return new Response(`Not Found: ${filename}`, { status: 404 });
-  }
-}

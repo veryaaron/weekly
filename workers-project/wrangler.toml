@@ -2,6 +2,9 @@ name = "weekly"
 main = "src/index.ts"
 compatibility_date = "2025-02-04"
 
+# Static assets - served automatically for paths not handled by Worker
+assets = { directory = "./public" }
+
 # Staging
 [env.staging]
 name = "weekly-staging"
@@ -12,14 +15,3 @@ name = "weekly"
 routes = [
   { pattern = "tools.kubagroup.com/*", zone_name = "kubagroup.com" }
 ]
-
-# Static assets
-[site]
-bucket = "./public"
-
-# Build settings
-[build]
-command = ""
-
-# Environment variables (set via wrangler secret or dashboard)
-# GOOGLE_SCRIPT_URL - Your Google Apps Script deployment URL
