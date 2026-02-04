@@ -33,7 +33,7 @@ const CONFIG = {
     // UI Text Configuration
     TEXT: {
         appTitle: 'Weekly Feedback',
-        appSubtitle: 'Share your week\\'s highlights, challenges, and ideas',
+        appSubtitle: "Share your week's highlights, challenges, and ideas",
         authTitle: 'Team Access',
         authSubtitle: 'Please sign in with your company Google account',
         successTitle: '✓ Feedback Submitted Successfully!',
@@ -47,7 +47,7 @@ const CONFIG = {
 
     // Error Messages
     ERRORS: {
-        wrongDomain: (email, domain) => \`⛔ Access Denied\\nYou must sign in with a @\${domain} email address.\\nYour email: \${email}\`,
+        wrongDomain: (email, domain) => `⛔ Access Denied\nYou must sign in with a @${domain} email address.\nYour email: ${email}`,
         missingAnswer: 'Please provide an answer before continuing',
         submissionError: 'Could not submit feedback. Please try again or contact your manager.',
         notSignedIn: 'Please sign in first'
