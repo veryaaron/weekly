@@ -719,16 +719,6 @@ Thanks!</textarea>
         const GOOGLE_CLIENT_ID = '287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com';
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMabfFbwWpBKiyRVcFsB9vz5oJjbp30JtuEtyt5GBKTyFf6r_MDHA0cqAv_GGokzjhew/exec';
         const ADMIN_EMAILS = ['aaron@kubapay.com'];
-        const TEAM_MEMBERS = [
-            { name: 'Aaron Ross', email: 'aaron@kubapay.com' },
-            { name: 'Team Member 2', email: 'member2@kubapay.com' },
-            { name: 'Team Member 3', email: 'member3@kubapay.com' },
-            { name: 'Team Member 4', email: 'member4@kubapay.com' },
-            { name: 'Team Member 5', email: 'member5@kubapay.com' },
-            { name: 'Team Member 6', email: 'member6@kubapay.com' },
-            { name: 'Team Member 7', email: 'member7@kubapay.com' },
-            { name: 'Team Member 8', email: 'member8@kubapay.com' }
-        ];
 
         let currentUser = null;
         let responseData = [];
@@ -780,8 +770,8 @@ Thanks!</textarea>
                 document.getElementById('userAvatar').src = currentUser.picture;
             }
 
-            // Team size
-            document.getElementById('teamSize').textContent = TEAM_MEMBERS.length;
+            // Team size will be set by loadResponses
+            document.getElementById('teamSize').textContent = '-';
 
             // Week info
             const now = new Date();
@@ -848,28 +838,30 @@ Thanks!</textarea>
 
                 const result = await response.json();
 
-                if (result.status === 'success' && result.responses) {
-                    responseData = result.responses;
-                    renderResponseTable(result.responses);
-                    document.getElementById('responseCount').textContent = result.responses.filter(r => r.submitted).length;
-                } else {
-                    // Fallback: show team list with unknown status
-                    renderResponseTable(TEAM_MEMBERS.map(m => ({
+                if (result.status === 'success' && result.members) {
+                    // Convert API response to dashboard format
+                    responseData = result.members.map(m => ({
                         name: m.name,
                         email: m.email,
-                        submitted: false,
-                        submittedAt: null
-                    })));
+                        submitted: m.status === 'submitted',
+                        submittedAt: m.submittedAt
+                    }));
+                    renderResponseTable(responseData);
+                    document.getElementById('responseCount').textContent = result.submittedCount || responseData.filter(r => r.submitted).length;
+                    document.getElementById('teamSize').textContent = result.totalCount || responseData.length;
+                } else {
+                    // Show error state
+                    showTableError('Could not load team members. Check that the Google Sheet has a "Team Members" tab.');
                 }
             } catch (error) {
                 console.error('Error loading responses:', error);
-                renderResponseTable(TEAM_MEMBERS.map(m => ({
-                    name: m.name,
-                    email: m.email,
-                    submitted: false,
-                    submittedAt: null
-                })));
+                showTableError('Failed to connect to backend: ' + error.message);
             }
+        }
+
+        function showTableError(message) {
+            const tbody = document.getElementById('responseTable');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--brand-red); padding: 20px;">' + message + '</td></tr>';
         }
 
         function renderResponseTable(responses) {
@@ -877,17 +869,18 @@ Thanks!</textarea>
             const submittedCount = responses.filter(r => r.submitted).length;
             document.getElementById('responseCount').textContent = submittedCount;
 
-            tbody.innerHTML = responses.map(r => {
-                const initials = r.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            tbody.innerHTML = responses.map((r, idx) => {
+                const initials = r.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
                 const statusClass = r.submitted ? 'submitted' : 'pending';
                 const statusText = r.submitted ? '✓ Submitted' : 'Pending';
                 const timeText = r.submittedAt ? formatTime(r.submittedAt) : '-';
+                const btnId = 'chase-btn-' + idx;
 
                 return '<tr>' +
                     '<td><div class="name-cell"><div class="avatar">' + initials + '</div>' + r.name + '</div></td>' +
                     '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
                     '<td>' + timeText + '</td>' +
-                    '<td>' + (r.submitted ? '<button class="btn-chase" disabled>-</button>' : '<button class="btn-chase" onclick="chaseUser(\\'' + r.email + '\\')">Chase</button>') + '</td>' +
+                    '<td>' + (r.submitted ? '-' : '<button class="btn-chase" id="' + btnId + '" data-email="' + r.email + '" onclick="chaseUser(this, \\'' + r.email + '\\')">Chase</button>') + '</td>' +
                     '</tr>';
             }).join('');
         }
@@ -904,10 +897,12 @@ Thanks!</textarea>
         }
 
         // Chase functions
-        async function chaseUser(email) {
-            const statusEl = document.getElementById('responseStatus');
-            statusEl.className = 'status-message loading';
-            statusEl.innerHTML = '<span class="spinner"></span> Sending reminder to ' + email + '...';
+        async function chaseUser(btn, email) {
+            // Show loading state on button
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
+            btn.style.minWidth = '70px';
 
             try {
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
@@ -924,14 +919,29 @@ Thanks!</textarea>
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    statusEl.className = 'status-message success';
-                    statusEl.textContent = '✓ Reminder sent to ' + email;
+                    // Show success state on button
+                    btn.innerHTML = 'Sent ✓';
+                    btn.style.background = 'var(--brand-green)';
+                    btn.style.borderColor = 'var(--brand-green)';
+                    btn.style.color = 'white';
                 } else {
                     throw new Error(result.message || 'Failed to send');
                 }
             } catch (error) {
-                statusEl.className = 'status-message error';
-                statusEl.textContent = '✗ Error: ' + error.message;
+                // Show error state
+                btn.innerHTML = 'Failed';
+                btn.style.background = 'var(--brand-red)';
+                btn.style.borderColor = 'var(--brand-red)';
+                btn.style.color = 'white';
+                btn.disabled = false;
+
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '';
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                }, 3000);
             }
         }
 
@@ -946,9 +956,11 @@ Thanks!</textarea>
                 return;
             }
 
-            const statusEl = document.getElementById('responseStatus');
-            statusEl.className = 'status-message loading';
-            statusEl.innerHTML = '<span class="spinner"></span> Sending reminders...';
+            // Find the button and show loading state
+            const btn = document.querySelector('.btn-warning[onclick*="chaseAllPending"]');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Sending...';
 
             try {
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
@@ -965,14 +977,29 @@ Thanks!</textarea>
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    statusEl.className = 'status-message success';
-                    statusEl.textContent = '✓ Sent reminders to ' + pending.length + ' team members';
+                    // Show success
+                    btn.innerHTML = '✓ Sent to ' + result.sentCount + ' members';
+                    btn.style.background = 'var(--brand-green)';
+
+                    // Refresh table to show updated status
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.background = '';
+                        btn.disabled = false;
+                        refreshResponses();
+                    }, 2000);
                 } else {
                     throw new Error(result.message || 'Failed');
                 }
             } catch (error) {
-                statusEl.className = 'status-message error';
-                statusEl.textContent = '✗ Error: ' + error.message;
+                btn.innerHTML = 'Failed - Retry';
+                btn.style.background = 'var(--brand-red)';
+                btn.disabled = false;
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '';
+                }, 3000);
             }
         }
 
@@ -1001,7 +1028,10 @@ Thanks!</textarea>
 
                 if (result.status === 'success') {
                     statusEl.className = 'status-message success';
-                    statusEl.textContent = '✓ Prompt emails sent to ' + (result.count || 'all') + ' team members';
+                    statusEl.textContent = '✓ Prompt emails sent to ' + (result.sentCount || 'all') + ' team members';
+                    if (result.failedCount > 0) {
+                        statusEl.textContent += ' (' + result.failedCount + ' failed)';
+                    }
                 } else {
                     throw new Error(result.message || 'Failed');
                 }
@@ -1035,7 +1065,14 @@ Thanks!</textarea>
 
                 if (result.status === 'success') {
                     statusEl.className = 'status-message success';
-                    statusEl.textContent = '✓ Reminders sent to ' + (result.count || 'pending') + ' team members';
+                    if (result.sentCount === 0) {
+                        statusEl.textContent = '✓ ' + (result.message || 'Everyone has already submitted!');
+                    } else {
+                        statusEl.textContent = '✓ Reminders sent to ' + result.sentCount + ' pending team members';
+                        if (result.failedCount > 0) {
+                            statusEl.textContent += ' (' + result.failedCount + ' failed)';
+                        }
+                    }
                 } else {
                     throw new Error(result.message || 'Failed');
                 }

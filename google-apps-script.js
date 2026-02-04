@@ -106,6 +106,16 @@ function doPost(e) {
       result = handleGenerateReport(data);
     } else if (action === 'getPreviousWeek') {
       result = handleGetPreviousWeek(data);
+    } else if (action === 'getWeeklyStatus') {
+      result = handleGetWeeklyStatus(data);
+    } else if (action === 'sendChaseEmail') {
+      result = handleSendChaseEmail(data);
+    } else if (action === 'sendBulkChase') {
+      result = handleSendBulkChase(data);
+    } else if (action === 'sendWeeklyPrompt') {
+      result = handleSendWeeklyPrompt(data);
+    } else if (action === 'sendWeeklyReminder') {
+      result = handleSendWeeklyReminder(data);
     } else {
       throw new Error('Unknown action: ' + action);
     }
@@ -1202,6 +1212,313 @@ function sendReportEmailForWeek(docUrl, responseCount, config, weekNumber, year)
     // Gmail permission not granted - just log the URL
     Logger.log('Email not sent (no Gmail permission). Report URL: ' + docUrl);
   }
+}
+
+// ========================================
+// ADMIN DASHBOARD API HANDLERS (v2.4)
+// ========================================
+
+/**
+ * Get weekly submission status for all team members
+ * Returns list of team members with their submission status
+ */
+function handleGetWeeklyStatus(data) {
+  Logger.log('Getting weekly status...');
+
+  const now = new Date();
+  const currentWeek = parseInt(Utilities.formatDate(now, 'Europe/London', 'w'));
+  const currentYear = now.getFullYear();
+
+  // Get all active team members
+  const teamMembers = getActiveTeamMembers();
+
+  // Get this week's responses
+  const responses = getResponsesForWeek(currentWeek, currentYear);
+  const submitterEmails = responses.map(r => r.email.toLowerCase().trim());
+
+  // Build status list for each team member
+  const statusList = teamMembers.map(member => {
+    const hasSubmitted = submitterEmails.includes(member.email.toLowerCase().trim());
+    const submission = responses.find(r => r.email.toLowerCase().trim() === member.email.toLowerCase().trim());
+
+    return {
+      email: member.email,
+      name: member.name,
+      role: member.role || '',
+      status: hasSubmitted ? 'submitted' : 'pending',
+      submittedAt: submission ? submission.timestamp : null
+    };
+  });
+
+  // Sort: pending first, then by name
+  statusList.sort((a, b) => {
+    if (a.status !== b.status) {
+      return a.status === 'pending' ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  const submittedCount = statusList.filter(s => s.status === 'submitted').length;
+  const pendingCount = statusList.filter(s => s.status === 'pending').length;
+
+  Logger.log(`Weekly status: ${submittedCount} submitted, ${pendingCount} pending`);
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    week: currentWeek,
+    year: currentYear,
+    submittedCount: submittedCount,
+    pendingCount: pendingCount,
+    totalCount: statusList.length,
+    members: statusList
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Send chase email to a single team member
+ * data: { email: string, subject?: string, body?: string }
+ */
+function handleSendChaseEmail(data) {
+  const email = data.email;
+
+  if (!email) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'Email address is required'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  Logger.log('Sending chase email to: ' + email);
+
+  // Get team member info
+  const teamMembers = getActiveTeamMembers();
+  const member = teamMembers.find(m => m.email.toLowerCase().trim() === email.toLowerCase().trim());
+  const name = member ? member.name.split(' ')[0] : email.split('@')[0];
+
+  const formUrl = 'https://tools.kubagroup.com/weekly';
+  const subject = data.subject || 'Reminder: Weekly Feedback';
+
+  // Simple plain text email body
+  const plainBody = data.body || `Hi ${name},
+
+Just a gentle reminder to submit your weekly feedback. It only takes a few minutes and helps keep the team connected.
+
+Submit here: ${formUrl}
+
+Please submit by Thursday to be included in the weekly report.
+
+Thanks,
+Aaron`;
+
+  try {
+    GmailApp.sendEmail(email, subject, plainBody);
+    Logger.log('Chase email sent to: ' + email);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'Chase email sent to ' + email
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (e) {
+    Logger.log('Failed to send chase email: ' + e.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'Failed to send email: ' + e.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Send chase emails to multiple team members
+ * data: { emails: string[], subject?: string, body?: string }
+ */
+function handleSendBulkChase(data) {
+  const emails = data.emails || [];
+
+  if (emails.length === 0) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'No email addresses provided'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  Logger.log('Sending bulk chase to ' + emails.length + ' people');
+
+  const results = {
+    sent: [],
+    failed: []
+  };
+
+  // Get team members once for efficiency
+  const teamMembers = getActiveTeamMembers();
+  const formUrl = 'https://tools.kubagroup.com/weekly';
+  const subject = data.subject || 'Reminder: Weekly Feedback';
+
+  emails.forEach(email => {
+    try {
+      const member = teamMembers.find(m => m.email.toLowerCase().trim() === email.toLowerCase().trim());
+      const name = member ? member.name.split(' ')[0] : email.split('@')[0];
+
+      const plainBody = data.body || `Hi ${name},
+
+Just a gentle reminder to submit your weekly feedback. It only takes a few minutes and helps keep the team connected.
+
+Submit here: ${formUrl}
+
+Please submit by Thursday to be included in the weekly report.
+
+Thanks,
+Aaron`;
+
+      GmailApp.sendEmail(email, subject, plainBody);
+
+      results.sent.push(email);
+      Logger.log('Sent to: ' + email);
+
+    } catch (e) {
+      results.failed.push({ email: email, error: e.toString() });
+      Logger.log('Failed for ' + email + ': ' + e.toString());
+    }
+  });
+
+  Logger.log('Bulk chase complete: ' + results.sent.length + ' sent, ' + results.failed.length + ' failed');
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    sentCount: results.sent.length,
+    failedCount: results.failed.length,
+    sent: results.sent,
+    failed: results.failed
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Send weekly prompt email to ALL team members
+ * Used for manual sends when scheduled trigger was missed
+ * data: { subject?: string, body?: string }
+ */
+function handleSendWeeklyPrompt(data) {
+  Logger.log('Sending weekly prompt to all team members...');
+
+  const teamMembers = getActiveTeamMembers();
+
+  if (teamMembers.length === 0) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'No active team members found. Please check the Team Members sheet.'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const formUrl = 'https://tools.kubagroup.com/weekly';
+  const subject = data.subject || 'Weekly Feedback Time';
+
+  const results = {
+    sent: [],
+    failed: []
+  };
+
+  teamMembers.forEach(member => {
+    const name = member.name.split(' ')[0];
+
+    const plainBody = data.body || `Hi ${name},
+
+It's that time of the week! Please take a few minutes to share your accomplishments, blockers, and priorities.
+
+Submit here: ${formUrl}
+
+Please submit by Thursday to be included in the weekly report.
+
+Thanks,
+Aaron`;
+
+    try {
+      GmailApp.sendEmail(member.email, subject, plainBody);
+      results.sent.push(member.email);
+      Logger.log('Prompt sent to: ' + member.email);
+    } catch (e) {
+      results.failed.push({ email: member.email, error: e.toString() });
+      Logger.log('Failed for ' + member.email + ': ' + e.toString());
+    }
+  });
+
+  Logger.log('Weekly prompt complete: ' + results.sent.length + ' sent, ' + results.failed.length + ' failed');
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    sentCount: results.sent.length,
+    failedCount: results.failed.length,
+    sent: results.sent,
+    failed: results.failed
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Send weekly reminder email to pending team members only
+ * data: { subject?: string, body?: string }
+ */
+function handleSendWeeklyReminder(data) {
+  Logger.log('Sending weekly reminder to pending members...');
+
+  const teamMembers = getActiveTeamMembers();
+  const submitters = getThisWeekSubmitters();
+
+  // Filter to only pending members
+  const pending = teamMembers.filter(m => !submitters.includes(m.email.toLowerCase().trim()));
+
+  if (pending.length === 0) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'Everyone has already submitted!',
+      sentCount: 0,
+      failedCount: 0,
+      sent: [],
+      failed: []
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  Logger.log('Pending members: ' + pending.length);
+
+  const formUrl = 'https://tools.kubagroup.com/weekly';
+  const subject = data.subject || 'Reminder: Weekly Feedback Due';
+
+  const results = {
+    sent: [],
+    failed: []
+  };
+
+  pending.forEach(member => {
+    const name = member.name.split(' ')[0];
+
+    const plainBody = data.body || `Hi ${name},
+
+This is a gentle reminder that we haven't received your weekly feedback yet. The report will be generated soon, and we'd love to include your updates!
+
+Submit here: ${formUrl}
+
+Takes only 5 minutes. Your input helps keep the team connected.
+
+Thanks,
+Aaron`;
+
+    try {
+      GmailApp.sendEmail(member.email, subject, plainBody);
+      results.sent.push(member.email);
+      Logger.log('Reminder sent to: ' + member.email);
+    } catch (e) {
+      results.failed.push({ email: member.email, error: e.toString() });
+      Logger.log('Failed for ' + member.email + ': ' + e.toString());
+    }
+  });
+
+  Logger.log('Weekly reminder complete: ' + results.sent.length + ' sent, ' + results.failed.length + ' failed');
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    sentCount: results.sent.length,
+    failedCount: results.failed.length,
+    sent: results.sent,
+    failed: results.failed
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 // ========================================
