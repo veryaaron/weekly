@@ -1,14 +1,14 @@
-name = "kuba-tools"
+name = "weekly"
 main = "src/index.ts"
 compatibility_date = "2025-02-04"
 
-# Staging (kuba-tools-staging.kubapay.workers.dev)
+# Staging
 [env.staging]
-name = "kuba-tools-staging"
+name = "weekly-staging"
 
 # Production (tools.kubagroup.com)
 [env.production]
-name = "kuba-tools"
+name = "weekly"
 routes = [
   { pattern = "tools.kubagroup.com/*", zone_name = "kubagroup.com" }
 ]
