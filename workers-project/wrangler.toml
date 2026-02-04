@@ -2,8 +2,12 @@ name = "weekly"
 main = "src/index.ts"
 compatibility_date = "2025-02-04"
 
-# Static assets - served automatically for paths not handled by Worker
-assets = { directory = "./public" }
+# Static assets - Worker handles routing first, then falls back to assets
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "none"
+not_found_handling = "none"
 
 # Staging
 [env.staging]
