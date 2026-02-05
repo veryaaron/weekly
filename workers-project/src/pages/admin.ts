@@ -651,18 +651,20 @@ export function getAdminPage(): Response {
 
                     <div class="form-group">
                         <label class="form-label">Email Body</label>
-                        <textarea class="form-textarea" id="promptBody" rows="6">It's time for your weekly update! Please take a few minutes to share what you accomplished this week, any blockers or challenges, and your priorities for next week.
+                        <textarea class="form-textarea" id="promptBody" rows="7">Hi {firstName},
+
+It's time for your weekly update! Please take a few minutes to share what you accomplished this week, any blockers or challenges, and your priorities for next week.
 
 Click here to submit: {formUrl}
 
 Thanks,
 Aaron</textarea>
-                        <p class="form-hint"><strong>Placeholders:</strong> {firstName} = recipient's first name, {formUrl} = form link. These will be replaced automatically.</p>
+                        <p class="form-hint"><strong>Placeholders:</strong> {firstName} = recipient's first name, {formUrl} = form link.</p>
                     </div>
 
                     <div class="btn-group">
-                        <button class="btn btn-primary" onclick="saveEmailSettings('prompt')">Save Changes</button>
-                        <button class="btn btn-warning" onclick="sendPromptNow()">Send Prompt Now</button>
+                        <button class="btn btn-secondary" onclick="sendTestEmail('prompt')">Send Test to Me</button>
+                        <button class="btn btn-warning" onclick="sendPromptNow()">Send to All</button>
                     </div>
                     <div id="promptStatus"></div>
                 </div>
@@ -678,7 +680,9 @@ Aaron</textarea>
 
                     <div class="form-group">
                         <label class="form-label">Email Body</label>
-                        <textarea class="form-textarea" id="reminderBody" rows="5">Quick reminder - we haven't received your weekly update yet. Please submit before end of day: {formUrl}
+                        <textarea class="form-textarea" id="reminderBody" rows="6">Hi {firstName},
+
+Quick reminder - we haven't received your weekly update yet. Please submit before end of day: {formUrl}
 
 Thanks,
 Aaron</textarea>
@@ -686,8 +690,8 @@ Aaron</textarea>
                     </div>
 
                     <div class="btn-group">
-                        <button class="btn btn-primary" onclick="saveEmailSettings('reminder')">Save Changes</button>
-                        <button class="btn btn-warning" onclick="sendReminderNow()">Send Reminder Now</button>
+                        <button class="btn btn-secondary" onclick="sendTestEmail('reminder')">Send Test to Me</button>
+                        <button class="btn btn-warning" onclick="sendReminderNow()">Send to Pending</button>
                     </div>
                     <div id="reminderStatus"></div>
                 </div>
@@ -998,6 +1002,42 @@ Aaron</textarea>
         }
 
         // Email functions
+        async function sendTestEmail(type) {
+            const statusEl = document.getElementById(type + 'Status');
+            statusEl.className = 'status-message loading';
+            statusEl.innerHTML = '<span class="spinner"></span> Sending test email to you...';
+
+            const subject = document.getElementById(type + 'Subject').value;
+            const body = document.getElementById(type + 'Body').value;
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'sendChaseEmail',
+                        email: currentUser.email,
+                        subject: subject,
+                        body: body,
+                        requestedBy: currentUser.email
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    statusEl.className = 'status-message success';
+                    statusEl.textContent = '✓ Test email sent to ' + currentUser.email + ' - check your inbox!';
+                } else {
+                    throw new Error(result.message || 'Failed');
+                }
+            } catch (error) {
+                statusEl.className = 'status-message error';
+                statusEl.textContent = '✗ Error: ' + error.message;
+            }
+        }
+
         async function sendPromptNow() {
             if (!confirm('Send weekly prompt email to all team members now?')) return;
 
