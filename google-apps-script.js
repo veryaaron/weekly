@@ -1298,8 +1298,15 @@ function handleSendChaseEmail(data) {
   const formUrl = 'https://tools.kubagroup.com/weekly';
   const subject = data.subject || 'Reminder: Weekly Feedback';
 
-  // Simple plain text email body
-  const plainBody = data.body || `Hi ${name},
+  // Build email body - replace placeholders if custom body provided
+  let plainBody;
+  if (data.body) {
+    plainBody = data.body
+      .replace(/\{firstName\}/g, name)
+      .replace(/\{formUrl\}/g, formUrl)
+      .replace(/\{name\}/g, name);
+  } else {
+    plainBody = `Hi ${name},
 
 Just a gentle reminder to submit your weekly feedback. It only takes a few minutes and helps keep the team connected.
 
@@ -1309,6 +1316,7 @@ Please submit by Thursday to be included in the weekly report.
 
 Thanks,
 Aaron`;
+  }
 
   try {
     GmailApp.sendEmail(email, subject, plainBody);
@@ -1359,7 +1367,15 @@ function handleSendBulkChase(data) {
       const member = teamMembers.find(m => m.email.toLowerCase().trim() === email.toLowerCase().trim());
       const name = member ? member.name.split(' ')[0] : email.split('@')[0];
 
-      const plainBody = data.body || `Hi ${name},
+      // Build email body - replace placeholders if custom body provided
+      let plainBody;
+      if (data.body) {
+        plainBody = data.body
+          .replace(/\{firstName\}/g, name)
+          .replace(/\{formUrl\}/g, formUrl)
+          .replace(/\{name\}/g, name);
+      } else {
+        plainBody = `Hi ${name},
 
 Just a gentle reminder to submit your weekly feedback. It only takes a few minutes and helps keep the team connected.
 
@@ -1369,6 +1385,7 @@ Please submit by Thursday to be included in the weekly report.
 
 Thanks,
 Aaron`;
+      }
 
       GmailApp.sendEmail(email, subject, plainBody);
 
@@ -1420,7 +1437,15 @@ function handleSendWeeklyPrompt(data) {
   teamMembers.forEach(member => {
     const name = member.name.split(' ')[0];
 
-    const plainBody = data.body || `Hi ${name},
+    // Build email body - replace placeholders if custom body provided
+    let plainBody;
+    if (data.body) {
+      plainBody = data.body
+        .replace(/\{firstName\}/g, name)
+        .replace(/\{formUrl\}/g, formUrl)
+        .replace(/\{name\}/g, name);
+    } else {
+      plainBody = `Hi ${name},
 
 It's that time of the week! Please take a few minutes to share your accomplishments, blockers, and priorities.
 
@@ -1430,6 +1455,7 @@ Please submit by Thursday to be included in the weekly report.
 
 Thanks,
 Aaron`;
+    }
 
     try {
       GmailApp.sendEmail(member.email, subject, plainBody);
@@ -1489,7 +1515,15 @@ function handleSendWeeklyReminder(data) {
   pending.forEach(member => {
     const name = member.name.split(' ')[0];
 
-    const plainBody = data.body || `Hi ${name},
+    // Build email body - replace placeholders if custom body provided
+    let plainBody;
+    if (data.body) {
+      plainBody = data.body
+        .replace(/\{firstName\}/g, name)
+        .replace(/\{formUrl\}/g, formUrl)
+        .replace(/\{name\}/g, name);
+    } else {
+      plainBody = `Hi ${name},
 
 This is a gentle reminder that we haven't received your weekly feedback yet. The report will be generated soon, and we'd love to include your updates!
 
@@ -1499,6 +1533,7 @@ Takes only 5 minutes. Your input helps keep the team connected.
 
 Thanks,
 Aaron`;
+    }
 
     try {
       GmailApp.sendEmail(member.email, subject, plainBody);

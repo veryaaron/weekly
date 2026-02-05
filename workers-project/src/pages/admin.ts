@@ -651,17 +651,13 @@ export function getAdminPage(): Response {
 
                     <div class="form-group">
                         <label class="form-label">Email Body</label>
-                        <textarea class="form-textarea" id="promptBody" rows="6">Hi {firstName},
+                        <textarea class="form-textarea" id="promptBody" rows="6">It's time for your weekly update! Please take a few minutes to share what you accomplished this week, any blockers or challenges, and your priorities for next week.
 
-It's time for your weekly update! Please take a few minutes to share:
-- What you accomplished this week
-- Any blockers or challenges
-- Your priorities for next week
+Click here to submit: {formUrl}
 
-Submit your update here: {formUrl}
-
-Thanks!</textarea>
-                        <p class="form-hint">Use {firstName} for the person's name and {formUrl} for the form link.</p>
+Thanks,
+Aaron</textarea>
+                        <p class="form-hint"><strong>Placeholders:</strong> {firstName} = recipient's first name, {formUrl} = form link. These will be replaced automatically.</p>
                     </div>
 
                     <div class="btn-group">
@@ -682,13 +678,11 @@ Thanks!</textarea>
 
                     <div class="form-group">
                         <label class="form-label">Email Body</label>
-                        <textarea class="form-textarea" id="reminderBody" rows="5">Hi {firstName},
+                        <textarea class="form-textarea" id="reminderBody" rows="5">Quick reminder - we haven't received your weekly update yet. Please submit before end of day: {formUrl}
 
-Quick reminder - we haven't received your weekly update yet. Please submit before end of day.
-
-{formUrl}
-
-Thanks!</textarea>
+Thanks,
+Aaron</textarea>
+                        <p class="form-hint"><strong>Placeholders:</strong> {firstName} = recipient's first name, {formUrl} = form link.</p>
                     </div>
 
                     <div class="btn-group">
