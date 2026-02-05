@@ -664,6 +664,7 @@ Aaron</textarea>
 
                     <div class="btn-group">
                         <button class="btn btn-secondary" onclick="sendTestEmail('prompt')">Send Test to Me</button>
+                        <button class="btn btn-primary" onclick="saveEmailSettings('prompt')">Save</button>
                         <button class="btn btn-warning" onclick="sendPromptNow()">Send to All</button>
                     </div>
                     <div id="promptStatus"></div>
@@ -691,6 +692,7 @@ Aaron</textarea>
 
                     <div class="btn-group">
                         <button class="btn btn-secondary" onclick="sendTestEmail('reminder')">Send Test to Me</button>
+                        <button class="btn btn-primary" onclick="saveEmailSettings('reminder')">Save</button>
                         <button class="btn btn-warning" onclick="sendReminderNow()">Send to Pending</button>
                     </div>
                     <div id="reminderStatus"></div>
