@@ -1076,7 +1076,8 @@
                     throw new Error(errData.error?.message || 'Authentication failed');
                 }
 
-                const data = await res.json();
+                const response = await res.json();
+                const data = response.data || response; // Handle wrapped response
                 currentUser = data.user;
                 isSuperAdmin = data.isSuperAdmin;
                 workspaces = data.workspaces || [];
@@ -1169,7 +1170,9 @@
                 throw new Error(err.error?.message || err.error || 'Request failed');
             }
 
-            return res.json();
+            const response = await res.json();
+            // Unwrap if response is wrapped in { success, data }
+            return response.data !== undefined ? response.data : response;
         }
 
         function getWorkspaceApiBase() {
