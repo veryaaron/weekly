@@ -1046,17 +1046,96 @@
         // ========================================
         // Auth
         // ========================================
+        const AUTH_STORAGE_KEY = 'weekly_feedback_auth';
+
         function initGoogleSignIn() {
+            // Check for existing session first
+            const savedAuth = sessionStorage.getItem(AUTH_STORAGE_KEY);
+            if (savedAuth) {
+                try {
+                    const authData = JSON.parse(savedAuth);
+                    // Try to restore session
+                    restoreSession(authData);
+                    return;
+                } catch (e) {
+                    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+                }
+            }
+
+            // No saved session, initialize Google Sign-In
+            showGoogleSignIn();
+        }
+
+        function showGoogleSignIn() {
             google.accounts.id.initialize({
                 client_id: CONFIG.GOOGLE_CLIENT_ID,
                 callback: handleCredentialResponse,
-                auto_select: true
+                auto_select: true,
+                itp_support: true,  // Safari Intelligent Tracking Prevention support
+                use_fedcm_for_prompt: true  // FedCM compliance for Chrome privacy changes
             });
 
             google.accounts.id.renderButton(
                 document.getElementById('g_id_signin'),
                 { theme: 'outline', size: 'large', width: 280 }
             );
+
+            // Also trigger One Tap for returning users
+            google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    // One Tap not available, user will use button
+                    console.log('One Tap not available:', notification.getNotDisplayedReason?.() || notification.getSkippedReason?.());
+                }
+            });
+        }
+
+        async function restoreSession(authData) {
+            try {
+                authToken = authData.token;
+
+                // Verify token is still valid
+                const res = await fetch(`${CONFIG.API_BASE_URL}/auth/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: authToken })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Session expired');
+                }
+
+                const apiResponse = await res.json();
+                const data = apiResponse.data || apiResponse;
+
+                currentUser = data.user;
+                isSuperAdmin = data.isSuperAdmin;
+                workspaces = data.workspaces || [];
+
+                if (workspaces.length === 0 && !isSuperAdmin) {
+                    throw new Error('No workspaces');
+                }
+
+                // Session restored successfully
+                if (isSuperAdmin) {
+                    document.getElementById('superAdminBadge').style.display = 'inline-flex';
+                }
+
+                populateWorkspaceSelector();
+
+                if (workspaces.length > 0) {
+                    currentWorkspaceId = workspaces[0].id;
+                }
+
+                document.getElementById('authCard').style.display = 'none';
+                document.getElementById('dashboard').classList.add('visible');
+                loadAllData();
+
+            } catch (err) {
+                console.log('Session restore failed, showing login:', err.message);
+                sessionStorage.removeItem(AUTH_STORAGE_KEY);
+                authToken = null;
+                showGoogleSignIn();
+            }
         }
 
         async function handleCredentialResponse(response) {
@@ -1078,7 +1157,7 @@
                 }
 
                 const apiResponse = await res.json();
-                const data = apiResponse.data || apiResponse; // Handle wrapped response
+                const data = apiResponse.data || apiResponse;
                 currentUser = data.user;
                 isSuperAdmin = data.isSuperAdmin;
                 workspaces = data.workspaces || [];
@@ -1087,6 +1166,13 @@
                     document.getElementById('authError').textContent = 'No workspaces found. You may not have access.';
                     return;
                 }
+
+                // Save session for persistence
+                sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+                    token: authToken,
+                    user: currentUser,
+                    timestamp: Date.now()
+                }));
 
                 // Show super admin badge
                 if (isSuperAdmin) {
