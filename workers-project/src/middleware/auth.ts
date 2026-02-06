@@ -4,8 +4,17 @@
  * Handles Google OAuth token verification and user lookup
  */
 
-import type { Env, TeamMember, GoogleTokenPayload, Logger } from '../types';
+import type { Env, TeamMember, GoogleTokenPayload, Logger, Workspace, WorkspaceMember } from '../types';
 import { UnauthorizedError, ForbiddenError, InternalError } from './error';
+import {
+  isSuperAdmin,
+  isAllowedDomain,
+  getUserWorkspaces,
+  findOrCreateWorkspace,
+  findOrCreateWorkspaceMember,
+  getWorkspaceById,
+  getWorkspaceMemberByEmail,
+} from '../services/database';
 
 // ============================================================================
 // Types
@@ -20,6 +29,21 @@ export interface AuthContext {
   };
   teamMember: TeamMember;
   isAdmin: boolean;
+}
+
+// Workspace-aware auth context for multi-tenant operations
+export interface WorkspaceAuthContext {
+  user: {
+    email: string;
+    name: string;
+    picture?: string;
+    givenName?: string;
+  };
+  isSuperAdmin: boolean;
+  workspaces: Workspace[];
+  // Set when accessing a specific workspace endpoint
+  currentWorkspace?: Workspace;
+  currentMember?: WorkspaceMember;
 }
 
 // ============================================================================
@@ -246,5 +270,140 @@ export function requireAdmin(authContext: AuthContext): void {
 export function requireActiveTeamMember(teamMember: TeamMember): void {
   if (!teamMember.active) {
     throw new ForbiddenError('Your account has been deactivated', 'ACCOUNT_DEACTIVATED');
+  }
+}
+
+// ============================================================================
+// Workspace-Aware Authentication (Multi-Tenant)
+// ============================================================================
+
+/**
+ * Authenticate a request for workspace operations
+ * Returns workspaces the user has access to and their super admin status
+ */
+export async function authenticateWorkspace(
+  request: Request,
+  env: Env,
+  logger: Logger
+): Promise<WorkspaceAuthContext> {
+  // Get token from Authorization header
+  const authHeader = request.headers.get('authorization');
+
+  if (!authHeader) {
+    throw new UnauthorizedError('Authorization header is required', 'MISSING_AUTH_HEADER');
+  }
+
+  if (!authHeader.startsWith('Bearer ')) {
+    throw new UnauthorizedError('Invalid authorization format', 'INVALID_AUTH_FORMAT');
+  }
+
+  const token = authHeader.slice(7).trim();
+
+  if (!token) {
+    throw new UnauthorizedError('Token is required', 'MISSING_TOKEN');
+  }
+
+  // Verify token with Google
+  const payload = await verifyGoogleToken(token, env.GOOGLE_CLIENT_ID, logger);
+
+  const email = payload.email.toLowerCase();
+  const superAdminEmails = env.SUPER_ADMIN_EMAILS || env.ADMIN_EMAILS; // Backwards compatibility
+  const allowedDomains = env.ALLOWED_DOMAINS || 'kubapay.com,vixtechnology.com,voqa.com';
+
+  // Check if user is a super admin
+  const userIsSuperAdmin = isSuperAdmin(email, superAdminEmails);
+
+  // Get workspaces user has access to
+  let workspaces = await getUserWorkspaces(env.DB, email);
+
+  // If user has no workspaces but is from an allowed domain, create their workspace
+  if (workspaces.length === 0 && isAllowedDomain(email, allowedDomains)) {
+    const newWorkspace = await findOrCreateWorkspace(
+      env.DB,
+      email,
+      payload.name,
+      allowedDomains.split(',').map((d) => d.trim())
+    );
+    workspaces = [newWorkspace];
+    logger.info('Created new workspace for user', { email, workspaceId: newWorkspace.id });
+  }
+
+  logger.info('Workspace authentication successful', {
+    email,
+    isSuperAdmin: userIsSuperAdmin,
+    workspaceCount: workspaces.length,
+  });
+
+  return {
+    user: {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      givenName: payload.given_name,
+    },
+    isSuperAdmin: userIsSuperAdmin,
+    workspaces,
+  };
+}
+
+/**
+ * Authenticate and resolve a specific workspace context
+ * Used for workspace-scoped API endpoints (/api/workspaces/:wsId/*)
+ */
+export async function authenticateWithWorkspace(
+  request: Request,
+  env: Env,
+  logger: Logger,
+  workspaceId: string
+): Promise<WorkspaceAuthContext> {
+  const auth = await authenticateWorkspace(request, env, logger);
+
+  // Get the workspace
+  const workspace = await getWorkspaceById(env.DB, workspaceId);
+  if (!workspace) {
+    throw new ForbiddenError('Workspace not found', 'WORKSPACE_NOT_FOUND');
+  }
+
+  // Check if user has access to this workspace
+  const hasAccess =
+    auth.isSuperAdmin || // Super admins can access any workspace
+    workspace.manager_email === auth.user.email.toLowerCase() || // Manager of the workspace
+    auth.workspaces.some((w) => w.id === workspaceId); // Member of the workspace
+
+  if (!hasAccess) {
+    throw new ForbiddenError('You do not have access to this workspace', 'WORKSPACE_ACCESS_DENIED');
+  }
+
+  // Get the user's membership in this workspace (if they're a member)
+  const member = await getWorkspaceMemberByEmail(env.DB, workspaceId, auth.user.email);
+
+  return {
+    ...auth,
+    currentWorkspace: workspace,
+    currentMember: member || undefined,
+  };
+}
+
+/**
+ * Require super admin access
+ */
+export function requireSuperAdmin(auth: WorkspaceAuthContext): void {
+  if (!auth.isSuperAdmin) {
+    throw new ForbiddenError('Super admin access required', 'SUPER_ADMIN_REQUIRED');
+  }
+}
+
+/**
+ * Require manager access to workspace (either manager or super admin)
+ */
+export function requireWorkspaceManager(auth: WorkspaceAuthContext): void {
+  if (!auth.currentWorkspace) {
+    throw new InternalError('No workspace context');
+  }
+
+  const isManager = auth.currentWorkspace.manager_email === auth.user.email.toLowerCase();
+
+  if (!auth.isSuperAdmin && !isManager) {
+    throw new ForbiddenError('Manager access required', 'MANAGER_REQUIRED');
   }
 }

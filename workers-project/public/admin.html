@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Configuration -->
-    <script src="/config.js?v=3.0"></script>
+    <script src="/config.js?v=4.0"></script>
 
     <style>
         /* Variables from main styles */
@@ -35,6 +35,7 @@
             --brand-yellow: #ffd618;
             --brand-green: #10b981;
             --brand-red: #ef4444;
+            --brand-blue: #3b82f6;
 
             --radius: 12px;
             --radius-sm: 8px;
@@ -162,11 +163,61 @@
             display: block;
         }
 
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
         .page-title {
             font-size: 24px;
             font-weight: 600;
             color: var(--gray-900);
-            margin-bottom: 24px;
+        }
+
+        /* Workspace Selector */
+        .workspace-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .workspace-selector label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-600);
+        }
+
+        .workspace-dropdown {
+            padding: 8px 16px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--gray-800);
+            background: var(--white);
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .workspace-dropdown:focus {
+            outline: none;
+            border-color: var(--brand-navy);
+            box-shadow: 0 0 0 3px rgba(39, 34, 81, 0.1);
+        }
+
+        .super-admin-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
         }
 
         /* Tabs */
@@ -337,6 +388,11 @@
         .badge-inactive {
             background: var(--gray-100);
             color: var(--gray-500);
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
         }
 
         /* Buttons */
@@ -641,6 +697,11 @@
                 padding: 20px 16px;
             }
 
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
             .tabs {
                 width: 100%;
             }
@@ -688,20 +749,33 @@
             <!-- Auth Card (shown when not logged in) -->
             <div class="auth-card" id="authCard">
                 <h2>Admin Access</h2>
-                <p>Sign in with your admin Google account.</p>
+                <p>Sign in with your Google account.</p>
                 <div id="g_id_signin"></div>
                 <div id="authError" style="color: var(--brand-red); margin-top: 16px; font-size: 14px;"></div>
             </div>
 
-            <!-- Dashboard (shown when logged in as admin) -->
+            <!-- Dashboard (shown when logged in) -->
             <div class="dashboard" id="dashboard">
-                <h1 class="page-title">Admin Dashboard</h1>
+                <!-- Page Header with Workspace Selector -->
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Admin Dashboard</h1>
+                        <span id="superAdminBadge" class="super-admin-badge" style="display: none;">Super Admin</span>
+                    </div>
+                    <div class="workspace-selector">
+                        <label for="workspaceSelect">Workspace:</label>
+                        <select id="workspaceSelect" class="workspace-dropdown" onchange="switchWorkspace()">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
 
                 <!-- Tabs -->
                 <div class="tabs">
                     <button class="tab active" onclick="switchTab('status')">Status</button>
                     <button class="tab" onclick="switchTab('team')">Team Members</button>
                     <button class="tab" onclick="switchTab('reports')">Reports</button>
+                    <button class="tab" onclick="switchTab('settings')">Settings</button>
                 </div>
 
                 <!-- Status Panel -->
@@ -828,6 +902,62 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Settings Panel -->
+                <div class="panel" id="panelSettings">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Workspace Settings</span>
+                        </div>
+                        <div class="card-body">
+                            <form id="settingsForm">
+                                <div class="form-group">
+                                    <div class="toggle-wrapper">
+                                        <div class="toggle" id="promptEnabledToggle" onclick="toggleSetting('promptEnabled')"></div>
+                                        <span class="toggle-label">Enable weekly prompt emails</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="toggle-wrapper">
+                                        <div class="toggle" id="reminderEnabledToggle" onclick="toggleSetting('reminderEnabled')"></div>
+                                        <span class="toggle-label">Enable reminder emails</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Prompt Day & Time</label>
+                                    <div style="display: flex; gap: 12px;">
+                                        <select class="form-select" id="settingsPromptDay" style="flex: 1;">
+                                            <option value="monday">Monday</option>
+                                            <option value="tuesday">Tuesday</option>
+                                            <option value="wednesday">Wednesday</option>
+                                            <option value="thursday">Thursday</option>
+                                            <option value="friday">Friday</option>
+                                        </select>
+                                        <input type="time" class="form-input" id="settingsPromptTime" style="flex: 1;">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Reminder Day & Time</label>
+                                    <div style="display: flex; gap: 12px;">
+                                        <select class="form-select" id="settingsReminderDay" style="flex: 1;">
+                                            <option value="monday">Monday</option>
+                                            <option value="tuesday">Tuesday</option>
+                                            <option value="wednesday">Wednesday</option>
+                                            <option value="thursday">Thursday</option>
+                                            <option value="friday">Friday</option>
+                                        </select>
+                                        <input type="time" class="form-input" id="settingsReminderTime" style="flex: 1;">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email From Name</label>
+                                    <input type="text" class="form-input" id="settingsEmailFromName" placeholder="Weekly Feedback">
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -851,8 +981,8 @@
                         <input type="text" class="form-input" id="memberName" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" for="memberFirstName">First Name *</label>
-                        <input type="text" class="form-input" id="memberFirstName" required>
+                        <label class="form-label" for="memberFirstName">First Name</label>
+                        <input type="text" class="form-input" id="memberFirstName">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="memberRole">Role</label>
@@ -902,9 +1032,15 @@
         // ========================================
         let authToken = null;
         let currentUser = null;
-        let isAdmin = false;
+        let isSuperAdmin = false;
+        let workspaces = [];
+        let currentWorkspaceId = null;
         let teamMembers = [];
         let memberActiveState = true;
+        let settings = {
+            promptEnabled: true,
+            reminderEnabled: true
+        };
 
         // ========================================
         // Auth
@@ -926,7 +1062,7 @@
             try {
                 authToken = response.credential;
 
-                // Verify with our backend - token goes in body
+                // Verify with our backend
                 const res = await fetch(`${CONFIG.API_BASE_URL}/auth/verify`, {
                     method: 'POST',
                     headers: {
@@ -937,16 +1073,30 @@
 
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.error || 'Authentication failed');
+                    throw new Error(errData.error?.message || 'Authentication failed');
                 }
 
                 const data = await res.json();
                 currentUser = data.user;
-                isAdmin = data.isAdmin;
+                isSuperAdmin = data.isSuperAdmin;
+                workspaces = data.workspaces || [];
 
-                if (!isAdmin) {
-                    document.getElementById('authError').textContent = 'Access denied. Admin privileges required.';
+                if (workspaces.length === 0 && !isSuperAdmin) {
+                    document.getElementById('authError').textContent = 'No workspaces found. You may not have access.';
                     return;
+                }
+
+                // Show super admin badge
+                if (isSuperAdmin) {
+                    document.getElementById('superAdminBadge').style.display = 'inline-flex';
+                }
+
+                // Populate workspace selector
+                populateWorkspaceSelector();
+
+                // Set initial workspace
+                if (workspaces.length > 0) {
+                    currentWorkspaceId = workspaces[0].id;
                 }
 
                 // Show dashboard
@@ -954,14 +1104,51 @@
                 document.getElementById('dashboard').classList.add('visible');
 
                 // Load initial data
-                loadStatus();
-                loadTeamMembers();
-                loadReports();
+                loadAllData();
 
             } catch (err) {
                 console.error('Auth error:', err);
                 document.getElementById('authError').textContent = err.message || 'Authentication failed';
             }
+        }
+
+        function populateWorkspaceSelector() {
+            const select = document.getElementById('workspaceSelect');
+            select.innerHTML = '';
+
+            // Add "All Workspaces" option for super admins
+            if (isSuperAdmin) {
+                const allOption = document.createElement('option');
+                allOption.value = 'all';
+                allOption.textContent = '📊 All Workspaces (Super Admin)';
+                select.appendChild(allOption);
+            }
+
+            // Add individual workspaces
+            workspaces.forEach(ws => {
+                const option = document.createElement('option');
+                option.value = ws.id;
+                option.textContent = ws.manager_name + "'s Workspace";
+                if (ws.manager_email === currentUser.email.toLowerCase()) {
+                    option.textContent = '👤 My Workspace';
+                }
+                select.appendChild(option);
+            });
+
+            // Select first workspace or "all" for super admin
+            if (isSuperAdmin) {
+                select.value = 'all';
+                currentWorkspaceId = 'all';
+            } else if (workspaces.length > 0) {
+                select.value = workspaces[0].id;
+                currentWorkspaceId = workspaces[0].id;
+            }
+        }
+
+        function switchWorkspace() {
+            const select = document.getElementById('workspaceSelect');
+            currentWorkspaceId = select.value;
+            loadAllData();
         }
 
         // ========================================
@@ -978,11 +1165,18 @@
             });
 
             if (!res.ok) {
-                const err = await res.json().catch(() => ({ error: 'Request failed' }));
-                throw new Error(err.error || 'Request failed');
+                const err = await res.json().catch(() => ({ error: { message: 'Request failed' } }));
+                throw new Error(err.error?.message || err.error || 'Request failed');
             }
 
             return res.json();
+        }
+
+        function getWorkspaceApiBase() {
+            if (currentWorkspaceId === 'all') {
+                return '/super';
+            }
+            return `/workspaces/${currentWorkspaceId}`;
         }
 
         // ========================================
@@ -999,38 +1193,75 @@
         }
 
         // ========================================
+        // Load All Data
+        // ========================================
+        function loadAllData() {
+            loadStatus();
+            loadTeamMembers();
+            loadReports();
+            if (currentWorkspaceId !== 'all') {
+                loadSettings();
+            }
+        }
+
+        // ========================================
         // Status
         // ========================================
         async function loadStatus() {
             try {
-                const data = await apiCall('/admin/status');
+                let data;
+                if (currentWorkspaceId === 'all') {
+                    // Super admin - get all submissions
+                    data = await apiCall('/super/submissions');
+                    // Transform to status format
+                    document.getElementById('statWeek').textContent = data.weekNumber;
+                    document.getElementById('statSubmitted').textContent = data.submissions.length;
+                    document.getElementById('statPending').textContent = '-';
+                    document.getElementById('statTotal').textContent = data.workspaceCount + ' workspaces';
 
-                // Update stats
-                document.getElementById('statWeek').textContent = `${data.weekNumber}`;
-                document.getElementById('statSubmitted').textContent = data.submittedCount;
-                document.getElementById('statPending').textContent = data.pendingCount;
-                document.getElementById('statTotal').textContent = data.totalMembers;
+                    const tbody = document.getElementById('statusTableBody');
+                    if (data.submissions.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No submissions found</td></tr>';
+                        return;
+                    }
 
-                // Update table
-                const tbody = document.getElementById('statusTableBody');
+                    tbody.innerHTML = data.submissions.map(s => `
+                        <tr>
+                            <td>${escapeHtml(s.member_name)}</td>
+                            <td>${escapeHtml(s.member_email)}</td>
+                            <td><span class="badge badge-info">${escapeHtml(s.workspace_name)}</span></td>
+                            <td>${formatDate(s.submitted_at)}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    // Regular workspace status
+                    data = await apiCall(`/workspaces/${currentWorkspaceId}/status`);
 
-                if (data.members.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No team members found</td></tr>';
-                    return;
+                    document.getElementById('statWeek').textContent = data.weekNumber;
+                    document.getElementById('statSubmitted').textContent = data.submittedCount;
+                    document.getElementById('statPending').textContent = data.pendingCount;
+                    document.getElementById('statTotal').textContent = data.totalMembers;
+
+                    const tbody = document.getElementById('statusTableBody');
+
+                    if (data.members.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No team members found</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = data.members.map(m => `
+                        <tr>
+                            <td>${escapeHtml(m.name || m.firstName)}</td>
+                            <td>${escapeHtml(m.email)}</td>
+                            <td>
+                                <span class="badge ${m.hasSubmitted ? 'badge-success' : 'badge-warning'}">
+                                    ${m.hasSubmitted ? 'Submitted' : 'Pending'}
+                                </span>
+                            </td>
+                            <td>${m.submittedAt ? formatDate(m.submittedAt) : '-'}</td>
+                        </tr>
+                    `).join('');
                 }
-
-                tbody.innerHTML = data.members.map(m => `
-                    <tr>
-                        <td>${escapeHtml(m.name || m.firstName)}</td>
-                        <td>${escapeHtml(m.email)}</td>
-                        <td>
-                            <span class="badge ${m.hasSubmitted ? 'badge-success' : 'badge-warning'}">
-                                ${m.hasSubmitted ? 'Submitted' : 'Pending'}
-                            </span>
-                        </td>
-                        <td>${m.submittedAt ? formatDate(m.submittedAt) : '-'}</td>
-                    </tr>
-                `).join('');
 
             } catch (err) {
                 console.error('Failed to load status:', err);
@@ -1042,8 +1273,14 @@
         // Team Members
         // ========================================
         async function loadTeamMembers() {
+            if (currentWorkspaceId === 'all') {
+                document.getElementById('teamTableBody').innerHTML =
+                    '<tr><td colspan="5" class="empty-state">Select a specific workspace to manage team members</td></tr>';
+                return;
+            }
+
             try {
-                const data = await apiCall('/admin/team?includeInactive=true');
+                const data = await apiCall(`/workspaces/${currentWorkspaceId}/team?includeInactive=true`);
                 teamMembers = data.members;
 
                 const tbody = document.getElementById('teamTableBody');
@@ -1082,6 +1319,10 @@
         }
 
         function openAddMemberModal() {
+            if (currentWorkspaceId === 'all') {
+                showToast('Select a specific workspace first', 'error');
+                return;
+            }
             document.getElementById('memberModalTitle').textContent = 'Add Team Member';
             document.getElementById('memberId').value = '';
             document.getElementById('memberEmail').value = '';
@@ -1101,9 +1342,9 @@
             document.getElementById('memberModalTitle').textContent = 'Edit Team Member';
             document.getElementById('memberId').value = member.id;
             document.getElementById('memberEmail').value = member.email;
-            document.getElementById('memberEmail').disabled = true; // Can't change email
+            document.getElementById('memberEmail').disabled = true;
             document.getElementById('memberName').value = member.name;
-            document.getElementById('memberFirstName').value = member.firstName;
+            document.getElementById('memberFirstName').value = member.first_name || '';
             document.getElementById('memberRole').value = member.role;
             memberActiveState = member.active;
             updateToggleUI();
@@ -1135,22 +1376,22 @@
             const firstName = document.getElementById('memberFirstName').value;
             const role = document.getElementById('memberRole').value;
 
-            if (!email || !name || !firstName) {
-                showToast('Please fill in all required fields', 'error');
+            if (!email || !name) {
+                showToast('Please fill in email and name', 'error');
                 return;
             }
 
             try {
                 if (id) {
                     // Update existing
-                    await apiCall(`/admin/team/${id}`, {
+                    await apiCall(`/workspaces/${currentWorkspaceId}/team/${id}`, {
                         method: 'PUT',
                         body: JSON.stringify({ name, firstName, role, active: memberActiveState })
                     });
                     showToast('Team member updated');
                 } else {
                     // Create new
-                    await apiCall('/admin/team', {
+                    await apiCall(`/workspaces/${currentWorkspaceId}/team`, {
                         method: 'POST',
                         body: JSON.stringify({ email, name, firstName, role })
                     });
@@ -1173,7 +1414,7 @@
             }
 
             try {
-                await apiCall(`/admin/team/${id}`, { method: 'DELETE' });
+                await apiCall(`/workspaces/${currentWorkspaceId}/team/${id}`, { method: 'DELETE' });
                 showToast('Team member deactivated');
                 loadTeamMembers();
                 loadStatus();
@@ -1185,7 +1426,7 @@
 
         async function activateMember(id) {
             try {
-                await apiCall(`/admin/team/${id}`, {
+                await apiCall(`/workspaces/${currentWorkspaceId}/team/${id}`, {
                     method: 'PUT',
                     body: JSON.stringify({ active: true })
                 });
@@ -1202,8 +1443,14 @@
         // Reports
         // ========================================
         async function loadReports() {
+            if (currentWorkspaceId === 'all') {
+                document.getElementById('reportsTableBody').innerHTML =
+                    '<tr><td colspan="4" class="empty-state">Select a specific workspace to view reports</td></tr>';
+                return;
+            }
+
             try {
-                const data = await apiCall('/admin/reports');
+                const data = await apiCall(`/workspaces/${currentWorkspaceId}/reports`);
 
                 const tbody = document.getElementById('reportsTableBody');
 
@@ -1214,11 +1461,11 @@
 
                 tbody.innerHTML = data.reports.map(r => `
                     <tr>
-                        <td>Week ${r.weekNumber}</td>
+                        <td>Week ${r.week_number}</td>
                         <td>${r.year}</td>
-                        <td>${formatDate(r.generatedAt)}</td>
+                        <td>${formatDate(r.generated_at)}</td>
                         <td>
-                            <button class="btn btn-secondary btn-sm" onclick="viewReport(${r.weekNumber}, ${r.year})">View</button>
+                            <button class="btn btn-secondary btn-sm" onclick="viewReport(${r.week_number}, ${r.year})">View</button>
                         </td>
                     </tr>
                 `).join('');
@@ -1230,8 +1477,13 @@
         }
 
         async function generateReport() {
+            if (currentWorkspaceId === 'all') {
+                showToast('Select a specific workspace first', 'error');
+                return;
+            }
+
             try {
-                const data = await apiCall('/admin/report', { method: 'POST', body: '{}' });
+                const data = await apiCall(`/workspaces/${currentWorkspaceId}/report`, { method: 'POST', body: '{}' });
                 showToast(`Report generated for Week ${data.weekNumber}`);
                 loadReports();
                 viewReportContent(data.content, data.weekNumber, data.year);
@@ -1243,8 +1495,8 @@
 
         async function viewReport(weekNumber, year) {
             try {
-                const data = await apiCall(`/admin/reports/${weekNumber}/${year}`);
-                viewReportContent(data.content, weekNumber, year);
+                const data = await apiCall(`/workspaces/${currentWorkspaceId}/reports/${weekNumber}/${year}`);
+                viewReportContent(data.report.content, weekNumber, year);
             } catch (err) {
                 console.error('Failed to load report:', err);
                 showToast(err.message || 'Failed to load report', 'error');
@@ -1271,6 +1523,83 @@
         }
 
         // ========================================
+        // Settings
+        // ========================================
+        async function loadSettings() {
+            if (currentWorkspaceId === 'all') return;
+
+            try {
+                const data = await apiCall(`/workspaces/${currentWorkspaceId}/settings`);
+
+                settings.promptEnabled = data.weeklyPromptEnabled;
+                settings.reminderEnabled = data.weeklyReminderEnabled;
+
+                updateSettingsToggles();
+
+                document.getElementById('settingsPromptDay').value = data.promptDay;
+                document.getElementById('settingsPromptTime').value = data.promptTime;
+                document.getElementById('settingsReminderDay').value = data.reminderDay;
+                document.getElementById('settingsReminderTime').value = data.reminderTime;
+                document.getElementById('settingsEmailFromName').value = data.emailFromName;
+
+            } catch (err) {
+                console.error('Failed to load settings:', err);
+            }
+        }
+
+        function toggleSetting(setting) {
+            if (setting === 'promptEnabled') {
+                settings.promptEnabled = !settings.promptEnabled;
+            } else if (setting === 'reminderEnabled') {
+                settings.reminderEnabled = !settings.reminderEnabled;
+            }
+            updateSettingsToggles();
+        }
+
+        function updateSettingsToggles() {
+            const promptToggle = document.getElementById('promptEnabledToggle');
+            const reminderToggle = document.getElementById('reminderEnabledToggle');
+
+            if (settings.promptEnabled) {
+                promptToggle.classList.add('active');
+            } else {
+                promptToggle.classList.remove('active');
+            }
+
+            if (settings.reminderEnabled) {
+                reminderToggle.classList.add('active');
+            } else {
+                reminderToggle.classList.remove('active');
+            }
+        }
+
+        async function saveSettings() {
+            if (currentWorkspaceId === 'all') {
+                showToast('Select a specific workspace first', 'error');
+                return;
+            }
+
+            try {
+                await apiCall(`/workspaces/${currentWorkspaceId}/settings`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        weeklyPromptEnabled: settings.promptEnabled,
+                        weeklyReminderEnabled: settings.reminderEnabled,
+                        promptDay: document.getElementById('settingsPromptDay').value,
+                        promptTime: document.getElementById('settingsPromptTime').value,
+                        reminderDay: document.getElementById('settingsReminderDay').value,
+                        reminderTime: document.getElementById('settingsReminderTime').value,
+                        emailFromName: document.getElementById('settingsEmailFromName').value
+                    })
+                });
+                showToast('Settings saved');
+            } catch (err) {
+                console.error('Failed to save settings:', err);
+                showToast(err.message || 'Failed to save settings', 'error');
+            }
+        }
+
+        // ========================================
         // Utilities
         // ========================================
         function escapeHtml(str) {
@@ -1281,6 +1610,7 @@
         }
 
         function formatDate(dateStr) {
+            if (!dateStr) return '-';
             const date = new Date(dateStr);
             return date.toLocaleDateString('en-GB', {
                 day: 'numeric',

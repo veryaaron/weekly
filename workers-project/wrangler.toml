@@ -6,6 +6,10 @@ compatibility_date = "2025-02-04"
 [vars]
 ENVIRONMENT = "development"
 FORM_URL = "https://tools.kubagroup.com/weekly"
+ADMIN_EMAILS = "aaron@kubapay.com"
+SUPER_ADMIN_EMAILS = "aaron@kubapay.com"
+ALLOWED_DOMAINS = "kubapay.com,vixtechnology.com,voqa.com"
+GOOGLE_CLIENT_ID = "287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com"
 
 # Static assets - Worker handles routing first, then falls back to assets
 [assets]
@@ -38,6 +42,10 @@ name = "weekly-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 FORM_URL = "https://tools.kubagroup.com/weekly"
+ADMIN_EMAILS = "aaron@kubapay.com"
+SUPER_ADMIN_EMAILS = "aaron@kubapay.com"
+ALLOWED_DOMAINS = "kubapay.com,vixtechnology.com,voqa.com"
+GOOGLE_CLIENT_ID = "287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com"
 
 [env.staging.ai]
 binding = "AI"
@@ -57,6 +65,10 @@ routes = [
 [env.production.vars]
 ENVIRONMENT = "production"
 FORM_URL = "https://tools.kubagroup.com/weekly"
+ADMIN_EMAILS = "aaron@kubapay.com"
+SUPER_ADMIN_EMAILS = "aaron@kubapay.com"
+ALLOWED_DOMAINS = "kubapay.com,vixtechnology.com,voqa.com"
+GOOGLE_CLIENT_ID = "287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com"
 
 [env.production.ai]
 binding = "AI"

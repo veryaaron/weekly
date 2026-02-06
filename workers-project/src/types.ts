@@ -17,9 +17,11 @@ export interface Env {
   // Environment variables
   ENVIRONMENT: 'development' | 'staging' | 'production';
   FORM_URL: string;
-  ADMIN_EMAILS?: string;
+  ADMIN_EMAILS?: string; // Deprecated: use SUPER_ADMIN_EMAILS
+  SUPER_ADMIN_EMAILS?: string; // Comma-separated list of super admin emails
   GOOGLE_CLIENT_ID?: string;
   RESEND_API_KEY?: string;
+  ALLOWED_DOMAINS?: string; // Comma-separated list of allowed email domains
 }
 
 // ============================================================================
@@ -81,6 +83,87 @@ export interface Setting {
   value: string;
   description: string | null;
   updated_at: string;
+}
+
+// ============================================================================
+// Workspace Models (Multi-Tenant)
+// ============================================================================
+
+export interface Workspace {
+  id: string;
+  manager_email: string;
+  manager_name: string;
+  allowed_domains: string; // JSON array stored as string
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspace_id: string;
+  email: string;
+  name: string;
+  first_name: string | null;
+  role: 'member' | 'admin';
+  active: number; // SQLite uses 0/1 for boolean
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceSubmission {
+  id: string;
+  workspace_id: string;
+  workspace_member_id: string;
+  week_number: number;
+  year: number;
+  accomplishments: string | null;
+  previous_week_progress: string | null;
+  blockers: string | null;
+  priorities: string | null;
+  shoutouts: string | null;
+  ai_summary: string | null;
+  ai_question: string | null;
+  ai_answer: string | null;
+  submitted_at: string;
+}
+
+export interface WorkspaceReport {
+  id: string;
+  workspace_id: string;
+  week_number: number;
+  year: number;
+  content: string;
+  format: 'markdown' | 'html' | 'plain';
+  generated_at: string;
+  generated_by: string | null;
+}
+
+export interface WorkspaceSettings {
+  workspace_id: string;
+  weekly_prompt_enabled: number; // SQLite 0/1
+  weekly_reminder_enabled: number;
+  prompt_day: string;
+  prompt_time: string;
+  reminder_day: string;
+  reminder_time: string;
+  email_from_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceEmailLog {
+  id: string;
+  workspace_id: string;
+  recipient_email: string;
+  recipient_name: string | null;
+  email_type: 'prompt' | 'reminder' | 'chase' | 'bulk_chase' | 'report';
+  subject: string;
+  body_preview: string | null;
+  sent_at: string;
+  status: 'sent' | 'failed' | 'bounced' | 'delivered';
+  resend_id: string | null;
+  error_message: string | null;
 }
 
 // ============================================================================

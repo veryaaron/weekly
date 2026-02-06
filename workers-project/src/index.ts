@@ -29,6 +29,26 @@ import {
   handleGetReport,
   handleGenerateReport,
 } from './routes/admin';
+import {
+  handleListWorkspaces,
+  handleGetWorkspace,
+  handleUpdateWorkspace,
+  handleGetWorkspaceTeam,
+  handleCreateWorkspaceMember,
+  handleUpdateWorkspaceMember,
+  handleDeleteWorkspaceMember,
+  handleGetWorkspaceStatus,
+  handleGetWorkspaceSubmissions,
+  handleGetWorkspacePreviousSubmission,
+  handleSubmitWorkspaceFeedback,
+  handleGetWorkspaceSettings,
+  handleUpdateWorkspaceSettings,
+  handleGetWorkspaceReports,
+  handleGetWorkspaceReport,
+  handleGenerateWorkspaceReport,
+  handleSuperListWorkspaces,
+  handleSuperGetSubmissions,
+} from './routes/workspaces';
 import { handleError, errorResponse, NotFoundError } from './middleware/error';
 import { authenticate, requireAdmin } from './middleware/auth';
 import { createLogger, generateRequestId, logRequest } from './utils/logger';
@@ -212,6 +232,160 @@ async function handleApiRequest(
 
     if (path === '/api/admin/settings' && request.method === 'PUT') {
       const response = await handleUpdateSettings(request, env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    // =========================================================================
+    // Workspace endpoints (multi-tenant)
+    // =========================================================================
+
+    // List workspaces
+    if (path === '/api/workspaces' && request.method === 'GET') {
+      const response = await handleListWorkspaces(request, env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    // Get specific workspace
+    const workspaceMatch = path.match(/^\/api\/workspaces\/([^/]+)$/);
+    if (workspaceMatch) {
+      const workspaceId = workspaceMatch[1];
+      if (request.method === 'GET') {
+        const response = await handleGetWorkspace(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+      if (request.method === 'PUT') {
+        const response = await handleUpdateWorkspace(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+    }
+
+    // Workspace team management
+    const teamMatch = path.match(/^\/api\/workspaces\/([^/]+)\/team$/);
+    if (teamMatch) {
+      const workspaceId = teamMatch[1];
+      if (request.method === 'GET') {
+        const response = await handleGetWorkspaceTeam(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+      if (request.method === 'POST') {
+        const response = await handleCreateWorkspaceMember(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+    }
+
+    // Workspace team member operations
+    const teamMemberMatch = path.match(/^\/api\/workspaces\/([^/]+)\/team\/([^/]+)$/);
+    if (teamMemberMatch) {
+      const [, workspaceId, memberId] = teamMemberMatch;
+      if (request.method === 'PUT') {
+        const response = await handleUpdateWorkspaceMember(request, env, logger, workspaceId, memberId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+      if (request.method === 'DELETE') {
+        const response = await handleDeleteWorkspaceMember(request, env, logger, workspaceId, memberId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+    }
+
+    // Workspace status
+    const statusMatch = path.match(/^\/api\/workspaces\/([^/]+)\/status$/);
+    if (statusMatch && request.method === 'GET') {
+      const workspaceId = statusMatch[1];
+      const response = await handleGetWorkspaceStatus(request, env, logger, workspaceId);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    // Workspace submissions - previous week
+    const prevSubmissionMatch = path.match(/^\/api\/workspaces\/([^/]+)\/submissions\/previous$/);
+    if (prevSubmissionMatch && request.method === 'GET') {
+      const workspaceId = prevSubmissionMatch[1];
+      const response = await handleGetWorkspacePreviousSubmission(request, env, logger, workspaceId);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    // Workspace submissions
+    const submissionsMatch = path.match(/^\/api\/workspaces\/([^/]+)\/submissions$/);
+    if (submissionsMatch) {
+      const workspaceId = submissionsMatch[1];
+      if (request.method === 'GET') {
+        const response = await handleGetWorkspaceSubmissions(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+      if (request.method === 'POST') {
+        const response = await handleSubmitWorkspaceFeedback(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+    }
+
+    // Workspace settings
+    const settingsMatch = path.match(/^\/api\/workspaces\/([^/]+)\/settings$/);
+    if (settingsMatch) {
+      const workspaceId = settingsMatch[1];
+      if (request.method === 'GET') {
+        const response = await handleGetWorkspaceSettings(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+      if (request.method === 'PUT') {
+        const response = await handleUpdateWorkspaceSettings(request, env, logger, workspaceId);
+        logRequest(logger, request, response, startTime);
+        return response;
+      }
+    }
+
+    // Workspace reports list
+    const reportsMatch = path.match(/^\/api\/workspaces\/([^/]+)\/reports$/);
+    if (reportsMatch && request.method === 'GET') {
+      const workspaceId = reportsMatch[1];
+      const response = await handleGetWorkspaceReports(request, env, logger, workspaceId);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    // Workspace specific report
+    const reportMatch = path.match(/^\/api\/workspaces\/([^/]+)\/reports\/(\d+)\/(\d+)$/);
+    if (reportMatch && request.method === 'GET') {
+      const [, workspaceId, week, year] = reportMatch;
+      const response = await handleGetWorkspaceReport(
+        request, env, logger, workspaceId, parseInt(week, 10), parseInt(year, 10)
+      );
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    // Generate workspace report
+    const generateReportMatch = path.match(/^\/api\/workspaces\/([^/]+)\/report$/);
+    if (generateReportMatch && request.method === 'POST') {
+      const workspaceId = generateReportMatch[1];
+      const response = await handleGenerateWorkspaceReport(request, env, logger, workspaceId);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    // =========================================================================
+    // Super Admin endpoints
+    // =========================================================================
+
+    if (path === '/api/super/workspaces' && request.method === 'GET') {
+      const response = await handleSuperListWorkspaces(request, env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    if (path === '/api/super/submissions' && request.method === 'GET') {
+      const response = await handleSuperGetSubmissions(request, env, logger);
       logRequest(logger, request, response, startTime);
       return response;
     }
