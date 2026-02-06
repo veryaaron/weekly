@@ -602,6 +602,7 @@ export function getAdminPage(): Response {
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('responses')">Responses</button>
                 <button class="tab" onclick="switchTab('emails')">Email Settings</button>
+                <button class="tab" onclick="switchTab('scheduler')">Scheduler</button>
                 <button class="tab" onclick="switchTab('reports')">Reports</button>
             </div>
 
@@ -696,6 +697,76 @@ Aaron</textarea>
                         <button class="btn btn-warning" onclick="sendReminderNow()">Send to Pending</button>
                     </div>
                     <div id="reminderStatus"></div>
+                </div>
+            </div>
+
+            <!-- Tab: Scheduler -->
+            <div class="tab-content" id="tab-scheduler">
+                <div class="section">
+                    <h2>⏰ Automatic Email Schedule</h2>
+                    <p class="section-desc">Configure when automatic prompt and reminder emails are sent.</p>
+
+                    <div id="triggerStatus" class="status-message" style="margin-bottom: 16px;"></div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div>
+                            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--gray-700);">Weekly Prompt</h3>
+                            <div class="form-group">
+                                <label class="form-label">Day</label>
+                                <select class="form-input" id="promptDay">
+                                    <option value="MONDAY">Monday</option>
+                                    <option value="TUESDAY">Tuesday</option>
+                                    <option value="WEDNESDAY" selected>Wednesday</option>
+                                    <option value="THURSDAY">Thursday</option>
+                                    <option value="FRIDAY">Friday</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Time (UK)</label>
+                                <select class="form-input" id="promptHour">
+                                    <option value="7">7:00 AM</option>
+                                    <option value="8">8:00 AM</option>
+                                    <option value="9" selected>9:00 AM</option>
+                                    <option value="10">10:00 AM</option>
+                                    <option value="11">11:00 AM</option>
+                                    <option value="12">12:00 PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--gray-700);">Follow-up Reminder</h3>
+                            <div class="form-group">
+                                <label class="form-label">Day</label>
+                                <select class="form-input" id="reminderDay">
+                                    <option value="TUESDAY">Tuesday</option>
+                                    <option value="WEDNESDAY">Wednesday</option>
+                                    <option value="THURSDAY" selected>Thursday</option>
+                                    <option value="FRIDAY">Friday</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Time (UK)</label>
+                                <select class="form-input" id="reminderHour">
+                                    <option value="9">9:00 AM</option>
+                                    <option value="12">12:00 PM</option>
+                                    <option value="14">2:00 PM</option>
+                                    <option value="15">3:00 PM</option>
+                                    <option value="16">4:00 PM</option>
+                                    <option value="17" selected>5:00 PM</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group" style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="saveTriggers()">Save Schedule</button>
+                        <button class="btn btn-secondary" onclick="loadTriggers()">Refresh</button>
+                        <button class="btn" style="background: var(--brand-red); color: white;" onclick="removeTriggers()">Disable All</button>
+                    </div>
+
+                    <p class="form-hint" style="margin-top: 16px;">
+                        <strong>Note:</strong> The prompt email goes to everyone. The reminder only goes to people who haven't submitted yet.
+                    </p>
                 </div>
             </div>
 
@@ -821,6 +892,11 @@ Aaron</textarea>
 
             document.querySelector('.tab[onclick*="' + tabName + '"]').classList.add('active');
             document.getElementById('tab-' + tabName).classList.add('active');
+
+            // Load data for specific tabs
+            if (tabName === 'scheduler') {
+                loadTriggers();
+            }
         }
 
         // Load responses from backend
@@ -1124,6 +1200,114 @@ Aaron</textarea>
             statusEl.className = 'status-message success';
             statusEl.textContent = '✓ Settings saved locally (will use these for next send)';
             setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        }
+
+        // Trigger management
+        async function loadTriggers() {
+            const statusEl = document.getElementById('triggerStatus');
+            statusEl.className = 'status-message loading';
+            statusEl.innerHTML = '<span class="spinner"></span> Loading current schedule...';
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'getTriggers',
+                        requestedBy: currentUser.email
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    const triggers = result.triggers || [];
+                    const reminderTriggers = triggers.filter(t =>
+                        t.handler === 'sendWednesdayReminder' || t.handler === 'sendThursdayReminder'
+                    );
+
+                    if (reminderTriggers.length > 0) {
+                        statusEl.className = 'status-message success';
+                        statusEl.textContent = '✓ ' + reminderTriggers.length + ' automatic triggers active';
+                    } else {
+                        statusEl.className = 'status-message';
+                        statusEl.style.background = 'var(--gray-100)';
+                        statusEl.textContent = 'No automatic triggers set. Emails will only send when you click "Send to All" manually.';
+                    }
+                } else {
+                    throw new Error(result.message || 'Failed to load');
+                }
+            } catch (error) {
+                statusEl.className = 'status-message error';
+                statusEl.textContent = '✗ Error: ' + error.message;
+            }
+        }
+
+        async function saveTriggers() {
+            const statusEl = document.getElementById('triggerStatus');
+            statusEl.className = 'status-message loading';
+            statusEl.innerHTML = '<span class="spinner"></span> Saving schedule...';
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'setTriggers',
+                        promptDay: document.getElementById('promptDay').value,
+                        promptHour: parseInt(document.getElementById('promptHour').value),
+                        reminderDay: document.getElementById('reminderDay').value,
+                        reminderHour: parseInt(document.getElementById('reminderHour').value),
+                        requestedBy: currentUser.email
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    statusEl.className = 'status-message success';
+                    statusEl.textContent = '✓ Schedule saved! Prompt: ' + result.prompt.day + ' ' + result.prompt.hour + ':00, Reminder: ' + result.reminder.day + ' ' + result.reminder.hour + ':00';
+                } else {
+                    throw new Error(result.message || 'Failed');
+                }
+            } catch (error) {
+                statusEl.className = 'status-message error';
+                statusEl.textContent = '✗ Error: ' + error.message;
+            }
+        }
+
+        async function removeTriggers() {
+            if (!confirm('This will disable all automatic emails. You will need to send emails manually. Continue?')) return;
+
+            const statusEl = document.getElementById('triggerStatus');
+            statusEl.className = 'status-message loading';
+            statusEl.innerHTML = '<span class="spinner"></span> Removing triggers...';
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'removeTriggers',
+                        requestedBy: currentUser.email
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    statusEl.className = 'status-message success';
+                    statusEl.textContent = '✓ ' + result.message + '. Automatic emails disabled.';
+                } else {
+                    throw new Error(result.message || 'Failed');
+                }
+            } catch (error) {
+                statusEl.className = 'status-message error';
+                statusEl.textContent = '✗ Error: ' + error.message;
+            }
         }
 
         // Report generation

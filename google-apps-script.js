@@ -116,6 +116,12 @@ function doPost(e) {
       result = handleSendWeeklyPrompt(data);
     } else if (action === 'sendWeeklyReminder') {
       result = handleSendWeeklyReminder(data);
+    } else if (action === 'getTriggers') {
+      result = handleGetTriggers(data);
+    } else if (action === 'removeTriggers') {
+      result = handleRemoveTriggers(data);
+    } else if (action === 'setTriggers') {
+      result = handleSetTriggers(data);
     } else {
       throw new Error('Unknown action: ' + action);
     }
@@ -766,10 +772,9 @@ function sendWednesdayReminder() {
 
   const teamMembers = getActiveTeamMembers();
   const submitters = getThisWeekSubmitters();
-  const config = getConfig();
 
   // Find who hasn't submitted yet
-  const pending = teamMembers.filter(m => !submitters.includes(m.email));
+  const pending = teamMembers.filter(m => !submitters.includes(m.email.toLowerCase().trim()));
 
   Logger.log('Pending submissions: ' + pending.length);
 
@@ -778,44 +783,25 @@ function sendWednesdayReminder() {
     return;
   }
 
-  const formUrl = 'https://veryaaron.github.io/weekly/';  // TODO: Update when migrated to tools.kubapay.workers.dev
+  const formUrl = 'https://tools.kubagroup.com/weekly';
 
   pending.forEach(member => {
-    const subject = '📋 Weekly Feedback Reminder';
+    const name = member.name.split(' ')[0];
+    const subject = 'Weekly Feedback Time';
 
-    const htmlBody = `
-      <div style="font-family: Ubuntu, Calibri, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: #272251; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-          <h1 style="margin: 0; font-size: 22px;">📋 Weekly Feedback</h1>
-        </div>
+    const plainBody = `Hi ${name},
 
-        <div style="background: #f5f5f7; padding: 25px; border-radius: 0 0 8px 8px;">
-          <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
-            Hi ${member.name.split(' ')[0]},
-          </p>
+It's time for your weekly feedback! Please take a few minutes to share your accomplishments, blockers, and priorities.
 
-          <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
-            It's time for your weekly feedback! Please take a few minutes to share your accomplishments, blockers, and priorities for this week.
-          </p>
+Submit here: ${formUrl}
 
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${formUrl}" style="background: #272251; color: #ffffff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Submit Weekly Feedback →
-            </a>
-          </div>
+Please submit by Thursday to be included in the weekly report.
 
-          <p style="color: #666; font-size: 13px; margin-top: 25px; padding-top: 20px; border-top: 1px solid #ddd;">
-            Please submit by Thursday to be included in the weekly report.
-          </p>
-        </div>
-      </div>
-    `;
+Thanks,
+Aaron`;
 
     try {
-      GmailApp.sendEmail(member.email, subject, 'Please submit your weekly feedback: ' + formUrl, {
-        htmlBody: htmlBody,
-        name: 'Weekly Feedback System'
-      });
+      GmailApp.sendEmail(member.email, subject, plainBody);
       Logger.log('Sent reminder to: ' + member.email);
     } catch (e) {
       Logger.log('Failed to send to ' + member.email + ': ' + e.toString());
@@ -834,10 +820,9 @@ function sendThursdayReminder() {
 
   const teamMembers = getActiveTeamMembers();
   const submitters = getThisWeekSubmitters();
-  const config = getConfig();
 
   // Find who still hasn't submitted
-  const pending = teamMembers.filter(m => !submitters.includes(m.email));
+  const pending = teamMembers.filter(m => !submitters.includes(m.email.toLowerCase().trim()));
 
   Logger.log('Still pending: ' + pending.length);
 
@@ -846,44 +831,25 @@ function sendThursdayReminder() {
     return;
   }
 
-  const formUrl = 'https://veryaaron.github.io/weekly/';  // TODO: Update when migrated
+  const formUrl = 'https://tools.kubagroup.com/weekly';
 
   pending.forEach(member => {
-    const subject = '⏰ Last Call: Weekly Feedback Due Today';
+    const name = member.name.split(' ')[0];
+    const subject = 'Reminder: Weekly Feedback Due Today';
 
-    const htmlBody = `
-      <div style="font-family: Ubuntu, Calibri, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: #e9426d; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-          <h1 style="margin: 0; font-size: 22px;">⏰ Reminder: Feedback Due Today</h1>
-        </div>
+    const plainBody = `Hi ${name},
 
-        <div style="background: #f5f5f7; padding: 25px; border-radius: 0 0 8px 8px;">
-          <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
-            Hi ${member.name.split(' ')[0]},
-          </p>
+This is a gentle reminder that we haven't received your weekly feedback yet. The report will be generated soon, and we'd love to include your updates!
 
-          <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
-            This is a gentle reminder that we haven't received your weekly feedback yet. The weekly report will be generated soon, and we'd love to include your updates!
-          </p>
+Submit here: ${formUrl}
 
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${formUrl}" style="background: #272251; color: #ffffff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Submit Now →
-            </a>
-          </div>
+Takes only 5 minutes. Your input helps keep the team connected.
 
-          <p style="color: #666; font-size: 13px; margin-top: 25px; padding-top: 20px; border-top: 1px solid #ddd;">
-            Takes only 5 minutes. Your input helps keep the team connected.
-          </p>
-        </div>
-      </div>
-    `;
+Thanks,
+Aaron`;
 
     try {
-      GmailApp.sendEmail(member.email, subject, 'Last call for weekly feedback: ' + formUrl, {
-        htmlBody: htmlBody,
-        name: 'Weekly Feedback System'
-      });
+      GmailApp.sendEmail(member.email, subject, plainBody);
       Logger.log('Sent Thursday reminder to: ' + member.email);
     } catch (e) {
       Logger.log('Failed to send to ' + member.email + ': ' + e.toString());
@@ -935,34 +901,120 @@ function setupEmailReminderTriggers() {
 function testSendReminderToSelf() {
   const config = getConfig();
   const testEmail = config.reportRecipient || Session.getActiveUser().getEmail();
-  const formUrl = 'https://veryaaron.github.io/weekly/';
+  const formUrl = 'https://tools.kubagroup.com/weekly';
 
-  const htmlBody = `
-    <div style="font-family: Ubuntu, Calibri, Arial, sans-serif; max-width: 600px;">
-      <div style="background: #272251; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0;">📋 TEST: Weekly Feedback Reminder</h1>
-      </div>
-      <div style="background: #f5f5f7; padding: 25px; border-radius: 0 0 8px 8px;">
-        <p>This is a test email from the Weekly Feedback System.</p>
-        <p>If you received this, the email system is working correctly!</p>
-        <div style="text-align: center; margin: 25px 0;">
-          <a href="${formUrl}" style="background: #272251; color: #fff; padding: 14px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
-            Submit Feedback →
-          </a>
-        </div>
-      </div>
-    </div>
-  `;
+  const plainBody = `Hi there,
+
+This is a test email from the Weekly Feedback System.
+If you received this, the email system is working correctly!
+
+Submit here: ${formUrl}
+
+Thanks,
+Aaron`;
 
   try {
-    GmailApp.sendEmail(testEmail, '📋 TEST: Weekly Feedback Reminder', 'Test email', {
-      htmlBody: htmlBody,
-      name: 'Weekly Feedback System'
-    });
-    Logger.log('✅ Test email sent to: ' + testEmail);
+    GmailApp.sendEmail(testEmail, 'TEST: Weekly Feedback Reminder', plainBody);
+    Logger.log('Test email sent to: ' + testEmail);
   } catch (e) {
-    Logger.log('❌ Failed to send test email: ' + e.toString());
+    Logger.log('Failed to send test email: ' + e.toString());
   }
+}
+
+/**
+ * Get list of current triggers (for admin UI)
+ */
+function handleGetTriggers(data) {
+  const triggers = ScriptApp.getProjectTriggers();
+  const triggerList = triggers.map(trigger => {
+    return {
+      id: trigger.getUniqueId(),
+      handler: trigger.getHandlerFunction(),
+      type: trigger.getEventType().toString()
+    };
+  });
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    triggers: triggerList
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Remove all email reminder triggers
+ */
+function handleRemoveTriggers(data) {
+  const triggers = ScriptApp.getProjectTriggers();
+  let removed = 0;
+
+  triggers.forEach(trigger => {
+    const handler = trigger.getHandlerFunction();
+    if (handler === 'sendWednesdayReminder' || handler === 'sendThursdayReminder') {
+      ScriptApp.deleteTrigger(trigger);
+      removed++;
+      Logger.log('Removed trigger: ' + handler);
+    }
+  });
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    message: 'Removed ' + removed + ' triggers'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Set up triggers with custom schedule
+ * data: { promptDay: 'WEDNESDAY', promptHour: 9, reminderDay: 'THURSDAY', reminderHour: 17 }
+ */
+function handleSetTriggers(data) {
+  // Remove existing reminder triggers first
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(trigger => {
+    const handler = trigger.getHandlerFunction();
+    if (handler === 'sendWednesdayReminder' || handler === 'sendThursdayReminder') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  const dayMap = {
+    'SUNDAY': ScriptApp.WeekDay.SUNDAY,
+    'MONDAY': ScriptApp.WeekDay.MONDAY,
+    'TUESDAY': ScriptApp.WeekDay.TUESDAY,
+    'WEDNESDAY': ScriptApp.WeekDay.WEDNESDAY,
+    'THURSDAY': ScriptApp.WeekDay.THURSDAY,
+    'FRIDAY': ScriptApp.WeekDay.FRIDAY,
+    'SATURDAY': ScriptApp.WeekDay.SATURDAY
+  };
+
+  const promptDay = dayMap[data.promptDay] || ScriptApp.WeekDay.WEDNESDAY;
+  const promptHour = data.promptHour || 9;
+  const reminderDay = dayMap[data.reminderDay] || ScriptApp.WeekDay.THURSDAY;
+  const reminderHour = data.reminderHour || 17;
+
+  // Create prompt trigger
+  ScriptApp.newTrigger('sendWednesdayReminder')
+    .timeBased()
+    .onWeekDay(promptDay)
+    .atHour(promptHour)
+    .inTimezone('Europe/London')
+    .create();
+
+  // Create reminder trigger
+  ScriptApp.newTrigger('sendThursdayReminder')
+    .timeBased()
+    .onWeekDay(reminderDay)
+    .atHour(reminderHour)
+    .inTimezone('Europe/London')
+    .create();
+
+  Logger.log('Triggers set: Prompt on ' + data.promptDay + ' at ' + promptHour + ':00, Reminder on ' + data.reminderDay + ' at ' + reminderHour + ':00');
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    message: 'Triggers configured successfully',
+    prompt: { day: data.promptDay, hour: promptHour },
+    reminder: { day: data.reminderDay, hour: reminderHour }
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
