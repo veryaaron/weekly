@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Admin - Weekly Feedback</title>
+
+    <!-- Google Sign-In -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Configuration -->
+    <script src="config.js?v=3.0"></script>
+
+    <style>
+        /* Variables from main styles */
+        :root {
+            --white: #ffffff;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+
+            --brand-navy: #272251;
+            --brand-yellow: #ffd618;
+            --brand-green: #10b981;
+            --brand-red: #ef4444;
+
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        /* Layout */
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-100);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-icon {
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            color: var(--gray-600);
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .btn-back:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            padding: 32px 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Auth Card */
+        .auth-card {
+            max-width: 400px;
+            margin: 60px auto;
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 32px;
+            text-align: center;
+        }
+
+        .auth-card h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .auth-card p {
+            color: var(--gray-500);
+            margin-bottom: 24px;
+        }
+
+        #g_id_signin {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.visible {
+            display: block;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 24px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--gray-100);
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 24px;
+            width: fit-content;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tab:hover {
+            color: var(--gray-800);
+        }
+
+        .tab.active {
+            background: var(--white);
+            color: var(--gray-900);
+            box-shadow: var(--shadow);
+        }
+
+        /* Panels */
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .stat-value.success {
+            color: var(--brand-green);
+        }
+
+        .stat-value.warning {
+            color: #f59e0b;
+        }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        th {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: var(--gray-50);
+        }
+
+        td {
+            font-size: 14px;
+            color: var(--gray-700);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: var(--gray-50);
+        }
+
+        /* Status badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-inactive {
+            background: var(--gray-100);
+            color: var(--gray-500);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--brand-navy);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: #3a3470;
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+        }
+
+        .btn-danger {
+            background: #fef2f2;
+            color: var(--brand-red);
+            border: 1px solid #fecaca;
+        }
+
+        .btn-danger:hover {
+            background: #fee2e2;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 6px;
+        }
+
+        /* Action buttons */
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 440px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            color: var(--gray-400);
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .modal-close:hover {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--gray-100);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--gray-800);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--brand-navy);
+            box-shadow: 0 0 0 3px rgba(39, 34, 81, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--gray-800);
+            background: var(--white);
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--brand-navy);
+            box-shadow: 0 0 0 3px rgba(39, 34, 81, 0.1);
+        }
+
+        /* Toggle switch */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--gray-200);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle.active {
+            background: var(--brand-green);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: var(--white);
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .toggle.active::after {
+            transform: translateX(20px);
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gray-200);
+            border-top-color: var(--brand-navy);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            background: var(--gray-900);
+            color: var(--white);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 2000;
+        }
+
+        .toast.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: var(--brand-green);
+        }
+
+        .toast.error {
+            background: var(--brand-red);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 16px;
+            }
+
+            .main {
+                padding: 20px 16px;
+            }
+
+            .tabs {
+                width: 100%;
+            }
+
+            .tab {
+                flex: 1;
+                text-align: center;
+                padding: 10px 12px;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .card-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <a href="/weekly" class="logo">
+                <svg class="logo-icon" viewBox="0 0 32 32" width="32" height="32">
+                    <path d="M0 32 Q16 32 16 16 Q16 0 32 0" fill="none" stroke="#ffd618" stroke-width="3"/>
+                </svg>
+                <span class="logo-text">Weekly Feedback</span>
+            </a>
+            <div class="header-right">
+                <a href="/weekly" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Form
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Auth Card (shown when not logged in) -->
+            <div class="auth-card" id="authCard">
+                <h2>Admin Access</h2>
+                <p>Sign in with your admin Google account.</p>
+                <div id="g_id_signin"></div>
+                <div id="authError" style="color: var(--brand-red); margin-top: 16px; font-size: 14px;"></div>
+            </div>
+
+            <!-- Dashboard (shown when logged in as admin) -->
+            <div class="dashboard" id="dashboard">
+                <h1 class="page-title">Admin Dashboard</h1>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('status')">Status</button>
+                    <button class="tab" onclick="switchTab('team')">Team Members</button>
+                    <button class="tab" onclick="switchTab('reports')">Reports</button>
+                </div>
+
+                <!-- Status Panel -->
+                <div class="panel active" id="panelStatus">
+                    <div class="stats-row" id="statsRow">
+                        <div class="stat-card">
+                            <div class="stat-label">Week</div>
+                            <div class="stat-value" id="statWeek">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Submitted</div>
+                            <div class="stat-value success" id="statSubmitted">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Pending</div>
+                            <div class="stat-value warning" id="statPending">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Team</div>
+                            <div class="stat-value" id="statTotal">-</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Submission Status</span>
+                            <button class="btn btn-secondary btn-sm" onclick="loadStatus()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 4v6h-6M1 20v-6h6"/>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                </svg>
+                                Refresh
+                            </button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Submitted</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="statusTableBody">
+                                    <tr>
+                                        <td colspan="4" class="loading">
+                                            <span class="spinner"></span> Loading...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Panel -->
+                <div class="panel" id="panelTeam">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Team Members</span>
+                            <button class="btn btn-primary btn-sm" onclick="openAddMemberModal()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add Member
+                            </button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamTableBody">
+                                    <tr>
+                                        <td colspan="5" class="loading">
+                                            <span class="spinner"></span> Loading...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Panel -->
+                <div class="panel" id="panelReports">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Generated Reports</span>
+                            <button class="btn btn-primary btn-sm" onclick="generateReport()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Generate Report
+                            </button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Week</th>
+                                        <th>Year</th>
+                                        <th>Generated</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportsTableBody">
+                                    <tr>
+                                        <td colspan="4" class="loading">
+                                            <span class="spinner"></span> Loading...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Member Modal -->
+    <div class="modal-overlay" id="memberModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title" id="memberModalTitle">Add Team Member</span>
+                <button class="modal-close" onclick="closeMemberModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="memberForm">
+                    <input type="hidden" id="memberId">
+                    <div class="form-group">
+                        <label class="form-label" for="memberEmail">Email *</label>
+                        <input type="email" class="form-input" id="memberEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="memberName">Full Name *</label>
+                        <input type="text" class="form-input" id="memberName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="memberFirstName">First Name *</label>
+                        <input type="text" class="form-input" id="memberFirstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="memberRole">Role</label>
+                        <select class="form-select" id="memberRole">
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="toggle-wrapper">
+                            <div class="toggle active" id="memberActiveToggle" onclick="toggleMemberActive()"></div>
+                            <span class="toggle-label">Active (receives weekly prompts)</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMemberModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveMember()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Report Modal -->
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <span class="modal-title" id="reportModalTitle">Report</span>
+                <button class="modal-close" onclick="closeReportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="reportContent" style="white-space: pre-wrap; font-size: 14px; line-height: 1.6;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeReportModal()">Close</button>
+                <button class="btn btn-primary" onclick="copyReport()">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ========================================
+        // State
+        // ========================================
+        let authToken = null;
+        let currentUser = null;
+        let isAdmin = false;
+        let teamMembers = [];
+        let memberActiveState = true;
+
+        // ========================================
+        // Auth
+        // ========================================
+        function initGoogleSignIn() {
+            google.accounts.id.initialize({
+                client_id: CONFIG.GOOGLE_CLIENT_ID,
+                callback: handleCredentialResponse,
+                auto_select: true
+            });
+
+            google.accounts.id.renderButton(
+                document.getElementById('g_id_signin'),
+                { theme: 'outline', size: 'large', width: 280 }
+            );
+        }
+
+        async function handleCredentialResponse(response) {
+            try {
+                authToken = response.credential;
+
+                // Verify with our backend
+                const res = await fetch(`${CONFIG.API_BASE_URL}/auth/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!res.ok) {
+                    throw new Error('Authentication failed');
+                }
+
+                const data = await res.json();
+                currentUser = data.user;
+                isAdmin = data.isAdmin;
+
+                if (!isAdmin) {
+                    document.getElementById('authError').textContent = 'Access denied. Admin privileges required.';
+                    return;
+                }
+
+                // Show dashboard
+                document.getElementById('authCard').style.display = 'none';
+                document.getElementById('dashboard').classList.add('visible');
+
+                // Load initial data
+                loadStatus();
+                loadTeamMembers();
+                loadReports();
+
+            } catch (err) {
+                console.error('Auth error:', err);
+                document.getElementById('authError').textContent = err.message || 'Authentication failed';
+            }
+        }
+
+        // ========================================
+        // API Helpers
+        // ========================================
+        async function apiCall(endpoint, options = {}) {
+            const res = await fetch(`${CONFIG.API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                    ...options.headers
+                }
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: 'Request failed' }));
+                throw new Error(err.error || 'Request failed');
+            }
+
+            return res.json();
+        }
+
+        // ========================================
+        // Tab Navigation
+        // ========================================
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update panels
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`panel${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+        }
+
+        // ========================================
+        // Status
+        // ========================================
+        async function loadStatus() {
+            try {
+                const data = await apiCall('/admin/status');
+
+                // Update stats
+                document.getElementById('statWeek').textContent = `${data.weekNumber}`;
+                document.getElementById('statSubmitted').textContent = data.submittedCount;
+                document.getElementById('statPending').textContent = data.pendingCount;
+                document.getElementById('statTotal').textContent = data.totalMembers;
+
+                // Update table
+                const tbody = document.getElementById('statusTableBody');
+
+                if (data.members.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No team members found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.members.map(m => `
+                    <tr>
+                        <td>${escapeHtml(m.name || m.firstName)}</td>
+                        <td>${escapeHtml(m.email)}</td>
+                        <td>
+                            <span class="badge ${m.hasSubmitted ? 'badge-success' : 'badge-warning'}">
+                                ${m.hasSubmitted ? 'Submitted' : 'Pending'}
+                            </span>
+                        </td>
+                        <td>${m.submittedAt ? formatDate(m.submittedAt) : '-'}</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error('Failed to load status:', err);
+                showToast('Failed to load status', 'error');
+            }
+        }
+
+        // ========================================
+        // Team Members
+        // ========================================
+        async function loadTeamMembers() {
+            try {
+                const data = await apiCall('/admin/team?includeInactive=true');
+                teamMembers = data.members;
+
+                const tbody = document.getElementById('teamTableBody');
+
+                if (teamMembers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No team members found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = teamMembers.map(m => `
+                    <tr>
+                        <td>${escapeHtml(m.name)}</td>
+                        <td>${escapeHtml(m.email)}</td>
+                        <td>${m.role}</td>
+                        <td>
+                            <span class="badge ${m.active ? 'badge-success' : 'badge-inactive'}">
+                                ${m.active ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-secondary btn-sm" onclick="editMember('${m.id}')">Edit</button>
+                                ${m.active
+                                    ? `<button class="btn btn-danger btn-sm" onclick="deactivateMember('${m.id}')">Deactivate</button>`
+                                    : `<button class="btn btn-secondary btn-sm" onclick="activateMember('${m.id}')">Activate</button>`
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error('Failed to load team members:', err);
+                showToast('Failed to load team members', 'error');
+            }
+        }
+
+        function openAddMemberModal() {
+            document.getElementById('memberModalTitle').textContent = 'Add Team Member';
+            document.getElementById('memberId').value = '';
+            document.getElementById('memberEmail').value = '';
+            document.getElementById('memberEmail').disabled = false;
+            document.getElementById('memberName').value = '';
+            document.getElementById('memberFirstName').value = '';
+            document.getElementById('memberRole').value = 'member';
+            memberActiveState = true;
+            updateToggleUI();
+            document.getElementById('memberModal').classList.add('open');
+        }
+
+        function editMember(id) {
+            const member = teamMembers.find(m => m.id === id);
+            if (!member) return;
+
+            document.getElementById('memberModalTitle').textContent = 'Edit Team Member';
+            document.getElementById('memberId').value = member.id;
+            document.getElementById('memberEmail').value = member.email;
+            document.getElementById('memberEmail').disabled = true; // Can't change email
+            document.getElementById('memberName').value = member.name;
+            document.getElementById('memberFirstName').value = member.firstName;
+            document.getElementById('memberRole').value = member.role;
+            memberActiveState = member.active;
+            updateToggleUI();
+            document.getElementById('memberModal').classList.add('open');
+        }
+
+        function closeMemberModal() {
+            document.getElementById('memberModal').classList.remove('open');
+        }
+
+        function toggleMemberActive() {
+            memberActiveState = !memberActiveState;
+            updateToggleUI();
+        }
+
+        function updateToggleUI() {
+            const toggle = document.getElementById('memberActiveToggle');
+            if (memberActiveState) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+
+        async function saveMember() {
+            const id = document.getElementById('memberId').value;
+            const email = document.getElementById('memberEmail').value;
+            const name = document.getElementById('memberName').value;
+            const firstName = document.getElementById('memberFirstName').value;
+            const role = document.getElementById('memberRole').value;
+
+            if (!email || !name || !firstName) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            try {
+                if (id) {
+                    // Update existing
+                    await apiCall(`/admin/team/${id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ name, firstName, role, active: memberActiveState })
+                    });
+                    showToast('Team member updated');
+                } else {
+                    // Create new
+                    await apiCall('/admin/team', {
+                        method: 'POST',
+                        body: JSON.stringify({ email, name, firstName, role })
+                    });
+                    showToast('Team member added');
+                }
+
+                closeMemberModal();
+                loadTeamMembers();
+                loadStatus();
+
+            } catch (err) {
+                console.error('Failed to save member:', err);
+                showToast(err.message || 'Failed to save member', 'error');
+            }
+        }
+
+        async function deactivateMember(id) {
+            if (!confirm('Deactivate this team member? They will no longer receive weekly prompts.')) {
+                return;
+            }
+
+            try {
+                await apiCall(`/admin/team/${id}`, { method: 'DELETE' });
+                showToast('Team member deactivated');
+                loadTeamMembers();
+                loadStatus();
+            } catch (err) {
+                console.error('Failed to deactivate member:', err);
+                showToast(err.message || 'Failed to deactivate member', 'error');
+            }
+        }
+
+        async function activateMember(id) {
+            try {
+                await apiCall(`/admin/team/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ active: true })
+                });
+                showToast('Team member activated');
+                loadTeamMembers();
+                loadStatus();
+            } catch (err) {
+                console.error('Failed to activate member:', err);
+                showToast(err.message || 'Failed to activate member', 'error');
+            }
+        }
+
+        // ========================================
+        // Reports
+        // ========================================
+        async function loadReports() {
+            try {
+                const data = await apiCall('/admin/reports');
+
+                const tbody = document.getElementById('reportsTableBody');
+
+                if (data.reports.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No reports generated yet</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.reports.map(r => `
+                    <tr>
+                        <td>Week ${r.weekNumber}</td>
+                        <td>${r.year}</td>
+                        <td>${formatDate(r.generatedAt)}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="viewReport(${r.weekNumber}, ${r.year})">View</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error('Failed to load reports:', err);
+                showToast('Failed to load reports', 'error');
+            }
+        }
+
+        async function generateReport() {
+            try {
+                const data = await apiCall('/admin/report', { method: 'POST', body: '{}' });
+                showToast(`Report generated for Week ${data.weekNumber}`);
+                loadReports();
+                viewReportContent(data.content, data.weekNumber, data.year);
+            } catch (err) {
+                console.error('Failed to generate report:', err);
+                showToast(err.message || 'Failed to generate report', 'error');
+            }
+        }
+
+        async function viewReport(weekNumber, year) {
+            try {
+                const data = await apiCall(`/admin/reports/${weekNumber}/${year}`);
+                viewReportContent(data.content, weekNumber, year);
+            } catch (err) {
+                console.error('Failed to load report:', err);
+                showToast(err.message || 'Failed to load report', 'error');
+            }
+        }
+
+        function viewReportContent(content, weekNumber, year) {
+            document.getElementById('reportModalTitle').textContent = `Report - Week ${weekNumber}, ${year}`;
+            document.getElementById('reportContent').textContent = content;
+            document.getElementById('reportModal').classList.add('open');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('open');
+        }
+
+        function copyReport() {
+            const content = document.getElementById('reportContent').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                showToast('Report copied to clipboard');
+            }).catch(() => {
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        // ========================================
+        // Utilities
+        // ========================================
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} visible`;
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // ========================================
+        // Init
+        // ========================================
+        window.onload = function() {
+            initGoogleSignIn();
+        };
+    </script>
+</body>
+</html>

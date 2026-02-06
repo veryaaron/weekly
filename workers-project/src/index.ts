@@ -13,7 +13,6 @@
 
 import type { Env, ScheduledEvent } from './types';
 import { getLandingPage } from './pages/landing';
-import { getAdminPage } from './pages/admin';
 import { handleHealthCheck, handlePing, handleHealthStats } from './routes/health';
 import { handleAuthVerify } from './routes/auth';
 import { handleGetPreviousSubmission, handleSubmitFeedback } from './routes/submissions';
@@ -268,9 +267,10 @@ export default {
         return env.ASSETS.fetch(new Request(assetUrl, request));
       }
 
-      // Route: Admin dashboard
+      // Route: Admin dashboard - serve static admin.html
       if (path === '/admin' || path === '/admin/') {
-        return getAdminPage();
+        const assetUrl = new URL('/admin.html', request.url);
+        return env.ASSETS.fetch(new Request(assetUrl, request));
       }
 
       // Route: Static assets for /weekly path (rewrite to root)
