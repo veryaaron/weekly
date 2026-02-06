@@ -926,17 +926,18 @@
             try {
                 authToken = response.credential;
 
-                // Verify with our backend
+                // Verify with our backend - token goes in body
                 const res = await fetch(`${CONFIG.API_BASE_URL}/auth/verify`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: authToken })
                 });
 
                 if (!res.ok) {
-                    throw new Error('Authentication failed');
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Authentication failed');
                 }
 
                 const data = await res.json();
