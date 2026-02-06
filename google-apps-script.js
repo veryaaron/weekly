@@ -236,24 +236,33 @@ function handleGetPreviousWeek(data) {
   }
 
   // Find most recent submission for this email in previous week
+  // Week/year derived from Timestamp (column 0) - no dependency on column positions
   let previousSubmission = null;
 
   for (let i = data_rows.length - 1; i >= 1; i--) {
     const row = data_rows[i];
-    const rowEmail = row[2];  // Email column
-    const rowWeek = row[9];   // Week Number column
-    const rowYear = row[10];  // Year column
+    const timestamp = row[0];
+    const rowEmail = row[2];
+
+    // Skip rows without timestamp
+    if (!timestamp) continue;
+
+    // Calculate week and year from timestamp
+    const rowDate = new Date(timestamp);
+    const rowWeek = parseInt(Utilities.formatDate(rowDate, 'Europe/London', 'w'));
+    const rowYear = rowDate.getFullYear();
 
     if (rowEmail && rowEmail.toLowerCase() === email.toLowerCase() &&
         rowWeek == previousWeek && rowYear == previousYear) {
       previousSubmission = {
-        timestamp: row[0],
+        timestamp: timestamp,
         name: row[1],
         accomplishments: row[3] || '',
-        blockers: row[4] || '',
-        priorities: row[5] || '',
-        aiSummary: row[6] || '',
-        shoutouts: row[11] || ''  // New shoutouts column (if exists)
+        previousWeekProgress: row[4] || '',
+        blockers: row[5] || '',
+        priorities: row[6] || '',
+        shoutouts: row[7] || '',
+        aiSummary: row[8] || ''
       };
       break;  // Found most recent, stop searching
     }
@@ -380,51 +389,45 @@ QUESTION: [your single pertinent question]`;
 function handleSubmitFeedback(data) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
-  // v2.2: Updated schema with previousWeekProgress and shoutouts columns
+  // v2.5: Week/Year derived from Timestamp - no separate columns needed
   if (sheet.getLastRow() === 0) {
     sheet.appendRow([
       'Timestamp',
       'Name',
       'Email',
       'Q1: Accomplishments',
-      'Q2: Previous Week Progress',  // NEW: Progress on last week's priorities
+      'Q2: Previous Week Progress',
       'Q3: Blockers',
       'Q4: Priorities',
-      'Q5: Shoutouts',               // NEW: Recognition/shoutouts
+      'Q5: Shoutouts',
       'AI Summary',
       'AI Question',
-      'Answer to AI Question',
-      'Week Number',
-      'Year'
+      'Answer to AI Question'
     ]);
 
-    const headerRange = sheet.getRange(1, 1, 1, 13);
+    const headerRange = sheet.getRange(1, 1, 1, 11);
     headerRange.setFontWeight('bold');
     headerRange.setBackground('#272251');
     headerRange.setFontColor('#FFFFFF');
   }
 
   const timestamp = new Date(data.timestamp);
-  const weekNumber = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), 'w');
-  const year = timestamp.getFullYear();
 
   sheet.appendRow([
     timestamp,
     data.name,
     data.email || '',
     data.accomplishments || '',
-    data.previousWeekProgress || '',  // NEW
+    data.previousWeekProgress || '',
     data.blockers || '',
     data.priorities || '',
-    data.shoutouts || '',             // NEW
+    data.shoutouts || '',
     data.aiSummary || '',
     data.aiQuestion || '',
-    data.aiAnswer || '',
-    weekNumber,
-    year
+    data.aiAnswer || ''
   ]);
 
-  sheet.autoResizeColumns(1, 13);
+  sheet.autoResizeColumns(1, 11);
 
   const lastRow = sheet.getLastRow();
   sheet.getRange(lastRow, 1).setNumberFormat('yyyy-MM-dd HH:mm:ss');
@@ -1008,31 +1011,43 @@ function generateWeeklyReportForWeek(weekNumber, year) {
 function getResponsesForWeek(weekNumber, year) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const data = sheet.getDataRange().getValues();
-  
+
   if (data.length <= 1) return [];
-  
+
   const responses = [];
-  
+
+  // Schema - week/year derived from Timestamp (column 0)
+  // No longer dependent on column positions for week/year
+
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    const rowWeek = row[9];  // Week Number column
-    const rowYear = row[10]; // Year column
-    
+    const timestamp = row[0];
+
+    // Skip rows without timestamp
+    if (!timestamp) continue;
+
+    // Calculate week and year from timestamp
+    const rowDate = new Date(timestamp);
+    const rowWeek = parseInt(Utilities.formatDate(rowDate, 'Europe/London', 'w'));
+    const rowYear = rowDate.getFullYear();
+
     if (rowWeek == weekNumber && rowYear == year) {
       responses.push({
-        timestamp: row[0],
+        timestamp: timestamp,
         name: row[1],
         email: row[2],
         accomplishments: row[3],
-        blockers: row[4],
-        priorities: row[5],
-        aiSummary: row[6],
-        aiQuestion: row[7],
-        aiAnswer: row[8]
+        previousWeekProgress: row[4],
+        blockers: row[5],
+        priorities: row[6],
+        shoutouts: row[7],
+        aiSummary: row[8],
+        aiQuestion: row[9],
+        aiAnswer: row[10]
       });
     }
   }
-  
+
   return responses;
 }
 
