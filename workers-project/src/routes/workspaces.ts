@@ -85,6 +85,7 @@ import {
   findOrCreateWorkspaceMember,
 } from '../services/database';
 import { getCurrentWeekInfo } from '../utils/week';
+import { analyzeSubmissions, formatAnalysisAsMarkdown, type SubmissionWithMember } from '../services/ai';
 
 // ============================================================================
 // Workspace List & Management
@@ -650,7 +651,7 @@ export async function handleGetWorkspaceReports(
 /**
  * GET /api/workspaces/:wsId/reports/:week/:year
  *
- * Get a specific report
+ * Get a specific report with parsed analysis
  */
 export async function handleGetWorkspaceReport(
   request: Request,
@@ -668,13 +669,33 @@ export async function handleGetWorkspaceReport(
     throw new NotFoundError(`Report for week ${weekNumber}/${year} not found`);
   }
 
-  return jsonResponse({ report });
+  // Try to parse the content as JSON (new format with analysis)
+  let content = report.content;
+  let analysis = null;
+
+  try {
+    const parsed = JSON.parse(report.content);
+    if (parsed.markdown && parsed.analysis) {
+      content = parsed.markdown;
+      analysis = parsed.analysis;
+    }
+  } catch {
+    // Content is plain markdown (old format), use as-is
+  }
+
+  return jsonResponse({
+    report: {
+      ...report,
+      content, // Markdown content
+      analysis, // Structured analysis (null for old reports)
+    },
+  });
 }
 
 /**
  * POST /api/workspaces/:wsId/report
  *
- * Generate a report for this workspace
+ * Generate an AI-powered report for this workspace
  */
 export async function handleGenerateWorkspaceReport(
   request: Request,
@@ -708,44 +729,74 @@ export async function handleGenerateWorkspaceReport(
     throw new BadRequestError('No submissions found for this week', 'NO_SUBMISSIONS');
   }
 
-  // Generate report content
-  let content = `# Weekly Report - Week ${weekNumber}, ${year}\n\n`;
-  content += `Generated for ${auth.currentWorkspace?.manager_name || 'Manager'}\n`;
-  content += `Total submissions: ${submissions.length}\n\n`;
+  // Get total team members for submission rate calculation
+  const teamMembers = await getWorkspaceMembers(env.DB, workspaceId, true); // active only
+  const totalMembers = teamMembers.length;
+  const workspaceName = auth.currentWorkspace?.manager_name || 'Team';
 
-  for (const sub of submissions) {
-    content += `## ${sub.member_name}\n\n`;
+  // Use AI analysis if API key is available
+  let analysis = null;
+  let content: string;
 
-    if (sub.accomplishments) {
-      content += `### Accomplishments\n${sub.accomplishments}\n\n`;
+  if (env.ANTHROPIC_API_KEY) {
+    logger.info('Generating AI-powered report');
+
+    // Cast submissions to SubmissionWithMember type
+    const submissionsWithMembers = submissions as SubmissionWithMember[];
+
+    analysis = await analyzeSubmissions(
+      env.ANTHROPIC_API_KEY,
+      submissionsWithMembers,
+      weekNumber,
+      year,
+      workspaceName,
+      totalMembers,
+      logger
+    );
+
+    // Generate formatted markdown from analysis
+    content = formatAnalysisAsMarkdown(analysis, weekNumber, year, workspaceName);
+  } else {
+    // Fallback to basic report without AI
+    logger.info('Generating basic report (no AI API key)');
+    content = `# Weekly Report - Week ${weekNumber}, ${year}\n\n`;
+    content += `Generated for ${workspaceName}\n`;
+    content += `Total submissions: ${submissions.length}/${totalMembers}\n\n`;
+
+    for (const sub of submissions) {
+      content += `## ${sub.member_name}\n\n`;
+
+      if (sub.accomplishments) {
+        content += `### Accomplishments\n${sub.accomplishments}\n\n`;
+      }
+
+      if (sub.blockers) {
+        content += `### Blockers\n${sub.blockers}\n\n`;
+      }
+
+      if (sub.priorities) {
+        content += `### Priorities\n${sub.priorities}\n\n`;
+      }
+
+      if (sub.shoutouts) {
+        content += `### Shoutouts\n${sub.shoutouts}\n\n`;
+      }
+
+      content += '---\n\n';
     }
-
-    if (sub.blockers) {
-      content += `### Blockers\n${sub.blockers}\n\n`;
-    }
-
-    if (sub.priorities) {
-      content += `### Priorities\n${sub.priorities}\n\n`;
-    }
-
-    if (sub.shoutouts) {
-      content += `### Shoutouts\n${sub.shoutouts}\n\n`;
-    }
-
-    if (sub.ai_summary) {
-      content += `### AI Summary\n${sub.ai_summary}\n\n`;
-    }
-
-    content += '---\n\n';
   }
 
-  // Save the report
+  // Save the report (store analysis as JSON in content if available)
+  const reportContent = analysis
+    ? JSON.stringify({ markdown: content, analysis })
+    : content;
+
   const report = await upsertWorkspaceReport(
     env.DB,
     workspaceId,
     weekNumber,
     year,
-    content,
+    reportContent,
     auth.user.email
   );
 
@@ -755,14 +806,21 @@ export async function handleGenerateWorkspaceReport(
     weekNumber,
     year,
     submissionCount: submissions.length,
+    aiPowered: !!analysis,
   });
 
+  // Return enhanced response with analysis
   return jsonResponse({
     id: report.id,
     weekNumber,
     year,
-    content,
+    workspaceId,
+    workspaceName,
+    content, // Markdown content
+    analysis, // Structured AI analysis (null if no API key)
     submissionCount: submissions.length,
+    totalMembers,
+    generatedAt: new Date().toISOString(),
   }, 201);
 }
 

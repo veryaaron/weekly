@@ -22,6 +22,7 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   RESEND_API_KEY?: string;
   ALLOWED_DOMAINS?: string; // Comma-separated list of allowed email domains
+  ANTHROPIC_API_KEY?: string; // For AI-powered report analysis
 }
 
 // ============================================================================
@@ -274,6 +275,64 @@ export interface GenerateReportResponse {
   year: number;
   content: string;
   submissionCount: number;
+}
+
+// AI-Powered Report Types
+export interface RiskAlert {
+  category: 'health_safety' | 'legal_compliance' | 'financial_budget';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  source: string; // Team member name who reported it
+  recommendation?: string;
+}
+
+export interface TrendIndicator {
+  metric: string;
+  direction: 'up' | 'down' | 'stable';
+  description: string;
+  percentChange?: number;
+}
+
+export interface TeamMemberSummary {
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  summary: string;
+  keyAccomplishments: string[];
+  blockers: string[];
+  priorities: string[];
+  sentiment: 'positive' | 'neutral' | 'concerned';
+  riskFlags: string[];
+}
+
+export interface AIReportAnalysis {
+  executiveSummary: string;
+  keyHighlights: string[];
+  risks: RiskAlert[];
+  trends: TrendIndicator[];
+  teamOverview: {
+    submissionRate: number;
+    totalMembers: number;
+    submittedCount: number;
+    commonThemes: string[];
+    overallSentiment: 'positive' | 'neutral' | 'concerned';
+  };
+  memberSummaries: TeamMemberSummary[];
+  recommendedActions: string[];
+  generatedAt: string;
+}
+
+export interface EnhancedReportResponse {
+  id: string;
+  weekNumber: number;
+  year: number;
+  workspaceId: string;
+  workspaceName: string;
+  analysis: AIReportAnalysis;
+  rawContent: string; // Original markdown for reference
+  submissionCount: number;
+  generatedAt: string;
 }
 
 // Team management types
