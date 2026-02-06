@@ -1076,8 +1076,8 @@
                     throw new Error(errData.error?.message || 'Authentication failed');
                 }
 
-                const response = await res.json();
-                const data = response.data || response; // Handle wrapped response
+                const apiResponse = await res.json();
+                const data = apiResponse.data || apiResponse; // Handle wrapped response
                 currentUser = data.user;
                 isSuperAdmin = data.isSuperAdmin;
                 workspaces = data.workspaces || [];
