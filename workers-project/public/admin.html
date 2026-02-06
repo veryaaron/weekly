@@ -974,13 +974,14 @@
                     <input type="hidden" id="memberId">
                     <div class="form-group">
                         <label class="form-label" for="memberEmail">Email *</label>
-                        <input type="email" class="form-input" id="memberEmail" required>
+                        <input type="email" class="form-input" id="memberEmail" required placeholder="colleague@kubapay.com">
+                        <small style="color: var(--gray-500); font-size: 12px; margin-top: 4px; display: block;">Name will auto-populate when they first log in</small>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="memberName">Full Name *</label>
-                        <input type="text" class="form-input" id="memberName" required>
+                    <div class="form-group" id="nameFieldsGroup" style="display: none;">
+                        <label class="form-label" for="memberName">Full Name</label>
+                        <input type="text" class="form-input" id="memberName" placeholder="Optional - auto-filled on login">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="display: none;">
                         <label class="form-label" for="memberFirstName">First Name</label>
                         <input type="text" class="form-input" id="memberFirstName">
                     </div>
@@ -1335,6 +1336,8 @@
             document.getElementById('memberRole').value = 'member';
             memberActiveState = true;
             updateToggleUI();
+            // Hide name fields when adding (name auto-populated on login)
+            document.getElementById('nameFieldsGroup').style.display = 'none';
             document.getElementById('memberModal').classList.add('open');
         }
 
@@ -1351,6 +1354,8 @@
             document.getElementById('memberRole').value = member.role;
             memberActiveState = member.active;
             updateToggleUI();
+            // Show name fields when editing
+            document.getElementById('nameFieldsGroup').style.display = 'block';
             document.getElementById('memberModal').classList.add('open');
         }
 
@@ -1379,8 +1384,8 @@
             const firstName = document.getElementById('memberFirstName').value;
             const role = document.getElementById('memberRole').value;
 
-            if (!email || !name) {
-                showToast('Please fill in email and name', 'error');
+            if (!email) {
+                showToast('Please enter an email address', 'error');
                 return;
             }
 
@@ -1393,10 +1398,13 @@
                     });
                     showToast('Team member updated');
                 } else {
-                    // Create new
+                    // Create new - name is optional, will be filled on first login
+                    const payload = { email, role };
+                    if (name) payload.name = name;
+                    if (firstName) payload.firstName = firstName;
                     await apiCall(`/workspaces/${currentWorkspaceId}/team`, {
                         method: 'POST',
-                        body: JSON.stringify({ email, name, firstName, role })
+                        body: JSON.stringify(payload)
                     });
                     showToast('Team member added');
                 }

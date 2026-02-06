@@ -21,7 +21,7 @@ interface UpdateWorkspaceBody {
 
 interface CreateMemberBody {
   email: string;
-  name: string;
+  name?: string; // Optional - will use email prefix if not provided
   firstName?: string;
   role?: 'member' | 'admin';
 }
@@ -229,14 +229,15 @@ export async function handleCreateWorkspaceMember(
 
   const body = (await parseJsonBody(request)) as CreateMemberBody;
 
-  if (!body.email || !body.name) {
-    throw new BadRequestError('Email and name are required', 'MISSING_FIELDS');
+  if (!body.email) {
+    throw new BadRequestError('Email is required', 'MISSING_FIELDS');
   }
 
   // Validate email domain against workspace allowed domains
   const workspace = auth.currentWorkspace!;
   const allowedDomains = JSON.parse(workspace.allowed_domains) as string[];
-  const emailDomain = body.email.toLowerCase().split('@')[1];
+  const emailLower = body.email.toLowerCase();
+  const emailDomain = emailLower.split('@')[1];
 
   if (!allowedDomains.includes(emailDomain)) {
     throw new BadRequestError(
@@ -245,9 +246,12 @@ export async function handleCreateWorkspaceMember(
     );
   }
 
+  // If name not provided, use email prefix as placeholder (will be updated on first login)
+  const name = body.name || emailLower.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
   const member = await createWorkspaceMember(env.DB, workspaceId, {
     email: body.email,
-    name: body.name,
+    name: name,
     firstName: body.firstName,
     role: body.role,
   });
