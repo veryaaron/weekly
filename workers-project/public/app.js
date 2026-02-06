@@ -4,6 +4,11 @@
  *
  * Main application logic for Weekly Feedback Form
  *
+ * v3.0 - D1 Database Migration
+ * - Switched from Google Apps Script to native Workers API
+ * - Auth token passed to API for user verification
+ * - Improved error handling and logging
+ *
  * v2.4 - Clean UX Redesign
  * - Simplified layout with single-focus design
  * - Admin tools moved to subtle header icon
@@ -20,23 +25,6 @@
  * - Hybrid flow: auto-login attempt first, button fallback
  * - FedCM compliant with use_fedcm_for_prompt
  * - Returning Google Workspace users sign in without clicking
- *
- * v2.1 - Complete OAuth Overhaul
- * - Button-only flow (removed prompt() that caused extra step)
- * - Added use_fedcm_for_button for proper FedCM button support
- * - Changed to localStorage for cross-session persistence
- * - auto_select in button config for seamless returning user sign-in
- * - Profile picture with referrerpolicy and initials fallback
- *
- * v2.0 - Auto-Login UX Improvement
- * - Enabled auto_select for seamless returning user sign-in
- *
- * v1.9 - FedCM Migration & OAuth Cleanup
- * - Removed deprecated prompt notification methods (FedCM compliance)
- * - Fixed avatar 404 error when user has no picture
- *
- * v1.8 - Field Name Alignment & Bug Fixes
- * - Fixed field IDs to match HTML (accomplishments, blockers, priorities, aiFollowUp)
  */
 
 // ========================================
@@ -46,6 +34,7 @@
 let currentUser = null;
 let currentUserData = null;
 let currentQuestion = 'accomplishments';  // v2.2: Now stores field name instead of number
+let authToken = null;  // v3.0: Store Google OAuth token for API calls
 
 const textareas = {};
 
@@ -130,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /**
  * Check if user has an existing valid session
- * v2.1: Uses localStorage for persistence across browser sessions
+ * v3.0: Also restores auth token for API calls
  */
 function checkExistingSession() {
     try {
@@ -140,14 +129,26 @@ function checkExistingSession() {
             const session = JSON.parse(savedSession);
             const now = Date.now();
 
-            // Session valid for 7 days (longer for localStorage)
-            const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-            if (session.timestamp && (now - session.timestamp) < SEVEN_DAYS) {
+            // v3.0: Shorter session for native API (token expires)
+            // Use 1 hour for API sessions, 7 days for legacy
+            const useNativeApi = window.FEEDBACK_CONFIG?.USE_NATIVE_API;
+            const maxAge = useNativeApi ? 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000; // 1 hour vs 7 days
+
+            if (session.timestamp && (now - session.timestamp) < maxAge) {
                 console.log('Found valid session for:', session.email);
 
-                // Restore user data
+                // Restore user data and token
                 currentUser = session.email;
                 currentUserData = session.userData;
+                authToken = session.authToken || null;  // v3.0: Restore token
+
+                // If using native API but no token, force re-auth
+                if (useNativeApi && !authToken) {
+                    console.log('Native API enabled but no token, requiring fresh sign-in');
+                    localStorage.removeItem('feedbackUserSession');
+                    initializeGoogleSignIn();
+                    return;
+                }
 
                 // Show the form directly
                 showFormForAuthenticatedUser();
@@ -167,13 +168,14 @@ function checkExistingSession() {
 
 /**
  * Save session to localStorage
- * v2.1: Changed from sessionStorage for cross-session persistence
+ * v3.0: Now includes auth token for API calls
  */
 function saveSession(email, userData) {
     try {
         localStorage.setItem('feedbackUserSession', JSON.stringify({
             email: email,
             userData: userData,
+            authToken: authToken,  // v3.0: Store token
             timestamp: Date.now()
         }));
         console.log('Session saved for:', email);
@@ -235,20 +237,55 @@ async function showFormForAuthenticatedUser() {
 
 /**
  * Fetch user's previous week submission for recall feature
- * v2.2: New function for previous week recall
+ * v3.0: Updated to use native API with fallback to Google Apps Script
  */
 async function fetchPreviousWeekData() {
     console.log('Fetching previous week data for:', currentUserData.email);
 
     try {
+        // v3.0: Use native API if enabled
+        if (window.FEEDBACK_CONFIG?.USE_NATIVE_API && authToken) {
+            const apiUrl = `${window.FEEDBACK_CONFIG.API_BASE_URL}/submissions/previous`;
+            console.log('Using native API:', apiUrl);
+
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+            console.log('Previous week API response:', result);
+
+            if (result.success && result.data?.found) {
+                currentUserData.previousWeek = {
+                    week: result.data.weekNumber,
+                    year: result.data.year,
+                    accomplishments: result.data.accomplishments || '',
+                    blockers: result.data.blockers || '',
+                    priorities: result.data.priorities || '',
+                    shoutouts: result.data.shoutouts || ''
+                };
+                console.log('Previous week data loaded from API:', currentUserData.previousWeek);
+            } else {
+                currentUserData.previousWeek = null;
+                console.log('No previous week data found');
+            }
+            return;
+        }
+
+        // Fallback to legacy Google Apps Script
         const scriptUrl = window.FEEDBACK_CONFIG?.GOOGLE_SCRIPT_URL;
 
         if (!scriptUrl) {
-            console.log('Google Script URL not configured, skipping previous week fetch');
+            console.log('No API configured, skipping previous week fetch');
             currentUserData.previousWeek = null;
             return;
         }
 
+        console.log('Using legacy Google Apps Script');
         const response = await fetch(scriptUrl, {
             method: 'POST',
             redirect: 'follow',
@@ -274,11 +311,9 @@ async function fetchPreviousWeekData() {
                 shoutouts: data.data.shoutouts || ''
             };
             console.log('Previous week data loaded:', currentUserData.previousWeek);
-            // Navigation will include previousWeekProgress via getVisibleQuestionOrder()
         } else {
             currentUserData.previousWeek = null;
             console.log('No previous week data found');
-            // Navigation will skip previousWeekProgress via getVisibleQuestionOrder()
         }
 
     } catch (error) {
@@ -414,6 +449,9 @@ function hideLoadingShowError(message) {
 async function handleCredentialResponse(response) {
     const credential = response.credential;
     const payload = parseJwt(credential);
+
+    // v3.0: Store the token for API calls
+    authToken = credential;
 
     console.log('Sign-in attempt:', payload.email);
     console.log('Config loaded:', !!window.FEEDBACK_CONFIG);
@@ -963,10 +1001,44 @@ async function handleFormSubmit(e) {
 }
 
 /**
- * Submit data to Google Sheets via Apps Script
+ * Submit feedback data
+ * v3.0: Updated to use native API with fallback to Google Apps Script
  */
 async function submitToGoogleSheets(data) {
-    console.log('Submitting to:', FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL);
+    // v3.0: Use native API if enabled
+    if (window.FEEDBACK_CONFIG?.USE_NATIVE_API && authToken) {
+        const apiUrl = `${window.FEEDBACK_CONFIG.API_BASE_URL}/submissions`;
+        console.log('Submitting to native API:', apiUrl);
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                accomplishments: data.accomplishments,
+                previousWeekProgress: data.previousWeekProgress,
+                blockers: data.blockers,
+                priorities: data.priorities,
+                shoutouts: data.shoutouts,
+                aiAnswer: data.aiAnswer
+            })
+        });
+
+        const result = await response.json();
+        console.log('API response:', result);
+
+        if (!result.success) {
+            throw new Error(result.error?.message || 'Submission failed');
+        }
+
+        console.log('Submission successful via native API!', result.data);
+        return result.data;
+    }
+
+    // Fallback to legacy Google Apps Script
+    console.log('Submitting to legacy endpoint:', FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL);
     console.log('Data being sent:', data);
 
     try {
@@ -1045,7 +1117,7 @@ function toggleAdminPanel() {
 
 /**
  * Generate weekly report (called from admin panel)
- * v2.0: Added event prevention to stop any page navigation
+ * v3.0: Updated to use native API with fallback to Google Apps Script
  */
 async function generateReport(event) {
     // Prevent any default behavior that might cause page reload
@@ -1064,6 +1136,43 @@ async function generateReport(event) {
     statusEl.innerHTML = 'Generating report, please wait...';
 
     try {
+        // v3.0: Use native API if enabled
+        if (window.FEEDBACK_CONFIG?.USE_NATIVE_API && authToken) {
+            const apiUrl = `${window.FEEDBACK_CONFIG.API_BASE_URL}/admin/report`;
+            console.log('Generating report via native API:', apiUrl);
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+
+            const result = await response.json();
+            console.log('API response:', result);
+
+            if (result.success) {
+                statusEl.className = 'success';
+                // Display the report content in a modal or new window
+                const reportContent = result.data.content;
+                const submissionCount = result.data.submissionCount;
+                statusEl.innerHTML = `✓ Report generated! (${submissionCount} submissions)<br><br>
+                    <details style="text-align: left; max-height: 300px; overflow-y: auto;">
+                        <summary>View Report</summary>
+                        <pre style="white-space: pre-wrap; font-size: 12px;">${escapeHtml(reportContent)}</pre>
+                    </details>`;
+            } else if (result.error?.code === 'BAD_REQUEST') {
+                statusEl.className = 'error';
+                statusEl.innerHTML = '⚠️ No responses found for this week yet.';
+            } else {
+                throw new Error(result.error?.message || 'Unknown error');
+            }
+            return;
+        }
+
+        // Fallback to legacy Google Apps Script
         const scriptUrl = FEEDBACK_CONFIG.GOOGLE_SCRIPT_URL;
 
         const response = await fetch(scriptUrl, {

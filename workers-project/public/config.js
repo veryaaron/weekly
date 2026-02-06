@@ -3,7 +3,7 @@
  * ===================
  *
  * Configuration for Weekly Feedback Form - Cloudflare Workers Deployment
- * v2.2 - Updated for tools.kubagroup.com
+ * v3.0 - Migrated to D1 database with native API endpoints
  */
 
 const CONFIG = {
@@ -18,7 +18,14 @@ const CONFIG = {
         'aaron@kubapay.com'
     ],
 
-    // Google Apps Script URL
+    // API Configuration - v3.0: Use native Workers API
+    // Set to true to use new D1-backed API, false to use legacy Google Apps Script
+    USE_NATIVE_API: true,
+
+    // Native API base URL (relative - same origin)
+    API_BASE_URL: '/api',
+
+    // Legacy Google Apps Script URL (fallback)
     GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwMabfFbwWpBKiyRVcFsB9vz5oJjbp30JtuEtyt5GBKTyFf6r_MDHA0cqAv_GGokzjhew/exec',
 
     // Claude Model Configuration

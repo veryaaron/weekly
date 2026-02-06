@@ -2,6 +2,11 @@ name = "weekly"
 main = "src/index.ts"
 compatibility_date = "2025-02-04"
 
+# Environment variables
+[vars]
+ENVIRONMENT = "development"
+FORM_URL = "https://tools.kubagroup.com/weekly"
+
 # Static assets - Worker handles routing first, then falls back to assets
 [assets]
 directory = "./public"
@@ -9,13 +14,55 @@ binding = "ASSETS"
 html_handling = "none"
 not_found_handling = "none"
 
-# Staging
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "weekly-feedback"
+database_id = "d05cf560-e7b7-4ed9-804e-9eaa8fa3edba"
+migrations_dir = "migrations"
+
+# AI binding (for summaries and reports)
+[ai]
+binding = "AI"
+
+# Cron triggers for scheduled emails
+# Wednesday 9am UTC = 9am UK (winter) / 8am UK (summer)
+# Thursday 5pm UTC = 5pm UK (winter) / 4pm UK (summer)
+# Note: Adjust for BST when needed
+[triggers]
+crons = ["0 9 * * 3", "0 17 * * 4"]
+
+# Staging environment
 [env.staging]
 name = "weekly-staging"
+[env.staging.vars]
+ENVIRONMENT = "staging"
+FORM_URL = "https://tools.kubagroup.com/weekly"
 
-# Production (tools.kubagroup.com)
+[env.staging.ai]
+binding = "AI"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "weekly-feedback-staging"
+database_id = "d05cf560-e7b7-4ed9-804e-9eaa8fa3edba"
+migrations_dir = "migrations"
+
+# Production environment (tools.kubagroup.com)
 [env.production]
 name = "weekly"
 routes = [
   { pattern = "tools.kubagroup.com/*", zone_name = "kubagroup.com" }
 ]
+[env.production.vars]
+ENVIRONMENT = "production"
+FORM_URL = "https://tools.kubagroup.com/weekly"
+
+[env.production.ai]
+binding = "AI"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "weekly-feedback"
+database_id = "d05cf560-e7b7-4ed9-804e-9eaa8fa3edba"
+migrations_dir = "migrations"
