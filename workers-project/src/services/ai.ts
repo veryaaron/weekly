@@ -121,16 +121,19 @@ Submission rate: ${Math.round((submissions.length / totalMembers) * 100)}%
 SUBMISSIONS:
 ${submissions.map((s, i) => `
 --- SUBMISSION ${i + 1}: ${s.member_name} (${s.member_email}) ---
-ACCOMPLISHMENTS:
+ACCOMPLISHMENTS THIS WEEK:
 ${s.accomplishments || 'None provided'}
+
+PROGRESS ON LAST WEEK'S PRIORITIES:
+${s.previous_week_progress || 'None provided'}
 
 BLOCKERS:
 ${s.blockers || 'None provided'}
 
-PRIORITIES:
+PRIORITIES FOR NEXT WEEK:
 ${s.priorities || 'None provided'}
 
-SHOUTOUTS:
+SHOUTOUTS/RECOGNITION (team members who stood out):
 ${s.shoutouts || 'None provided'}
 ---
 `).join('\n')}
@@ -139,6 +142,13 @@ Respond with a JSON object matching this exact structure:
 {
   "executiveSummary": "2-3 paragraph overview of the week's progress, key themes, and overall team health",
   "keyHighlights": ["highlight 1", "highlight 2", "...up to 5 key positive highlights"],
+  "teamRecognition": [
+    {
+      "recipient": "Name of person being recognized",
+      "from": "Name of person giving recognition",
+      "reason": "Why they were recognized"
+    }
+  ],
   "risks": [
     {
       "category": "health_safety" | "legal_compliance" | "financial_budget",
@@ -170,8 +180,10 @@ Respond with a JSON object matching this exact structure:
       "memberEmail": "member's email",
       "summary": "1-2 sentence summary of their week",
       "keyAccomplishments": ["accomplishment 1", "..."],
+      "progressOnPreviousPriorities": "Brief assessment of how they progressed on last week's priorities",
       "blockers": ["blocker 1", "..."],
       "priorities": ["priority 1", "..."],
+      "shoutoutsGiven": ["who they recognized and why"],
       "sentiment": "positive" | "neutral" | "concerned",
       "riskFlags": ["any specific risks this person flagged"]
     }
@@ -179,9 +191,12 @@ Respond with a JSON object matching this exact structure:
   "recommendedActions": ["action 1", "action 2", "...top 3-5 recommended actions for the manager"]
 }
 
-Include a memberSummary for each of the ${submissions.length} submissions.
-If there are no risks in a category, return an empty risks array.
-Be specific and actionable in your analysis.`;
+IMPORTANT:
+- Include a memberSummary for each of the ${submissions.length} submissions
+- Extract ALL shoutouts/recognition mentions into the teamRecognition array
+- If there are no risks in a category, return an empty risks array
+- If there are no shoutouts, return an empty teamRecognition array
+- Be specific and actionable in your analysis`;
 
   try {
     const responseText = await callClaude(apiKey, systemPrompt, userMessage, logger);
@@ -244,12 +259,25 @@ function createFallbackAnalysis(
 ): AIReportAnalysis {
   const submissionRate = Math.round((submissions.length / totalMembers) * 100);
 
+  // Extract shoutouts for fallback
+  const shoutouts: Array<{ recipient: string; from: string; reason: string }> = [];
+  submissions.forEach(s => {
+    if (s.shoutouts) {
+      shoutouts.push({
+        recipient: 'See details',
+        from: s.member_name,
+        reason: s.shoutouts.substring(0, 200),
+      });
+    }
+  });
+
   return {
     executiveSummary: `Week ${weekNumber} of ${year} report generated with ${submissions.length} out of ${totalMembers} team members submitting (${submissionRate}% response rate). AI analysis was unavailable - please review individual submissions below for details.`,
     keyHighlights: submissions
       .filter(s => s.accomplishments)
       .slice(0, 5)
       .map(s => `${s.member_name}: ${(s.accomplishments || '').split('\n')[0]?.substring(0, 100) || 'Submitted update'}`),
+    teamRecognition: shoutouts,
     risks: [],
     trends: [{
       metric: 'Submission Rate',
@@ -269,8 +297,10 @@ function createFallbackAnalysis(
       memberEmail: s.member_email,
       summary: s.accomplishments?.split('\n')[0]?.substring(0, 150) || 'Submitted weekly update',
       keyAccomplishments: (s.accomplishments || '').split('\n').filter(Boolean).slice(0, 3),
+      progressOnPreviousPriorities: s.previous_week_progress || undefined,
       blockers: (s.blockers || '').split('\n').filter(Boolean),
       priorities: (s.priorities || '').split('\n').filter(Boolean),
+      shoutoutsGiven: s.shoutouts ? [s.shoutouts] : [],
       sentiment: 'neutral' as const,
       riskFlags: [],
     })),
@@ -345,6 +375,15 @@ export function formatAnalysisAsMarkdown(
     md += `## 🌟 Key Highlights\n\n`;
     analysis.keyHighlights.forEach(h => {
       md += `- ${h}\n`;
+    });
+    md += `\n`;
+  }
+
+  // Team Recognition / Shoutouts
+  if (analysis.teamRecognition && analysis.teamRecognition.length > 0) {
+    md += `## 🏆 Team Recognition\n\n`;
+    analysis.teamRecognition.forEach(r => {
+      md += `- **${r.recipient}** recognized by ${r.from}: ${r.reason}\n`;
     });
     md += `\n`;
   }

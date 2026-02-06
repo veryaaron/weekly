@@ -300,15 +300,24 @@ export interface TeamMemberSummary {
   memberEmail: string;
   summary: string;
   keyAccomplishments: string[];
+  progressOnPreviousPriorities?: string;
   blockers: string[];
   priorities: string[];
+  shoutoutsGiven?: string[];
   sentiment: 'positive' | 'neutral' | 'concerned';
   riskFlags: string[];
+}
+
+export interface TeamRecognition {
+  recipient: string;
+  from: string;
+  reason: string;
 }
 
 export interface AIReportAnalysis {
   executiveSummary: string;
   keyHighlights: string[];
+  teamRecognition: TeamRecognition[];
   risks: RiskAlert[];
   trends: TrendIndicator[];
   teamOverview: {

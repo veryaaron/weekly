@@ -1026,6 +1026,62 @@
             flex: 1;
         }
 
+        /* Team Recognition */
+        .recognition-list {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .recognition-item {
+            background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+            border-left: 4px solid #f59e0b;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+        }
+
+        .recognition-recipient {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--gray-800);
+            margin-bottom: 6px;
+        }
+
+        .recognition-reason {
+            font-size: 14px;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .recognition-from {
+            font-size: 13px;
+            color: var(--gray-500);
+            font-style: italic;
+        }
+
+        /* Report Loading State */
+        .report-generating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--brand-blue);
+            font-size: 13px;
+        }
+
+        .report-generating .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--gray-200);
+            border-top-color: var(--brand-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Section Headers */
         .section-header {
             font-size: 14px;
@@ -1945,15 +2001,51 @@
                 return;
             }
 
+            // Show loading state in the table
+            const tbody = document.getElementById('reportsTableBody');
+            const currentWeek = new Date().toISOString().slice(0, 10);
+            const loadingRow = document.createElement('tr');
+            loadingRow.id = 'report-generating-row';
+            loadingRow.innerHTML = `
+                <td colspan="4">
+                    <div class="report-generating">
+                        <div class="spinner"></div>
+                        <span>Generating AI-powered report... This may take 30-60 seconds as Claude analyzes all submissions.</span>
+                    </div>
+                </td>
+            `;
+            tbody.insertBefore(loadingRow, tbody.firstChild);
+
+            // Disable the generate button
+            const generateBtn = document.querySelector('[onclick="generateReport()"]');
+            if (generateBtn) {
+                generateBtn.disabled = true;
+                generateBtn.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></div> Generating...';
+            }
+
             try {
-                showToast('Generating AI-powered report...', 'info');
                 const data = await apiCall(`/workspaces/${currentWorkspaceId}/report`, { method: 'POST', body: '{}' });
                 showToast(`Report generated for Week ${data.weekNumber}`);
-                loadReports();
+                loadReports(); // This will remove the loading row
                 displayReport(data);
             } catch (err) {
                 console.error('Failed to generate report:', err);
                 showToast(err.message || 'Failed to generate report', 'error');
+                // Remove loading row on error
+                const row = document.getElementById('report-generating-row');
+                if (row) row.remove();
+            } finally {
+                // Re-enable the generate button
+                if (generateBtn) {
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        Generate Report
+                    `;
+                }
             }
         }
 
@@ -2078,6 +2170,22 @@
                 `;
             }
 
+            // Team Recognition / Shoutouts
+            if (analysis.teamRecognition && analysis.teamRecognition.length > 0) {
+                html += `
+                    <div class="section-header">🏆 Team Recognition</div>
+                    <div class="recognition-list">
+                        ${analysis.teamRecognition.map(r => `
+                            <div class="recognition-item">
+                                <div class="recognition-recipient">🌟 ${escapeHtml(r.recipient)}</div>
+                                <div class="recognition-reason">${escapeHtml(r.reason)}</div>
+                                <div class="recognition-from">— Recognized by ${escapeHtml(r.from)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             // Common Themes
             if (analysis.teamOverview.commonThemes && analysis.teamOverview.commonThemes.length > 0) {
                 html += `
@@ -2120,6 +2228,13 @@
                             <div class="collapsible-content">
                                 <div class="member-summary">${escapeHtml(member.summary)}</div>
 
+                                ${member.progressOnPreviousPriorities ? `
+                                    <div class="member-section">
+                                        <h5>Progress on Previous Priorities</h5>
+                                        <p style="font-size:14px;color:var(--gray-600);">${escapeHtml(member.progressOnPreviousPriorities)}</p>
+                                    </div>
+                                ` : ''}
+
                                 ${member.keyAccomplishments && member.keyAccomplishments.length > 0 ? `
                                     <div class="member-section">
                                         <h5>Accomplishments</h5>
@@ -2136,8 +2251,15 @@
 
                                 ${member.priorities && member.priorities.length > 0 ? `
                                     <div class="member-section">
-                                        <h5>Priorities</h5>
+                                        <h5>Priorities for Next Week</h5>
                                         <ul>${member.priorities.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+                                    </div>
+                                ` : ''}
+
+                                ${member.shoutoutsGiven && member.shoutoutsGiven.length > 0 ? `
+                                    <div class="member-section">
+                                        <h5>🏆 Recognition Given</h5>
+                                        <ul>${member.shoutoutsGiven.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul>
                                     </div>
                                 ` : ''}
 
@@ -2269,6 +2391,18 @@
                 html += '</ul>';
             }
 
+            // Team Recognition
+            if (analysis.teamRecognition?.length > 0) {
+                html += '<h2>🏆 Team Recognition</h2>';
+                analysis.teamRecognition.forEach(r => {
+                    html += `<div class="recognition" style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin:10px 0;border-radius:4px;">
+                        <strong>🌟 ${r.recipient}</strong><br>
+                        ${r.reason}<br>
+                        <em style="color:#666;">— Recognized by ${r.from}</em>
+                    </div>`;
+                });
+            }
+
             // Actions
             if (analysis.recommendedActions?.length > 0) {
                 html += '<h2>✅ Recommended Actions</h2><ol>';
@@ -2282,9 +2416,11 @@
                 html += `<div class="member">
                     <h4>${getSentimentEmoji(m.sentiment)} ${m.memberName}</h4>
                     <p>${m.summary}</p>
+                    ${m.progressOnPreviousPriorities ? `<strong>Progress on Previous Priorities:</strong><p>${m.progressOnPreviousPriorities}</p>` : ''}
                     ${m.keyAccomplishments?.length ? `<strong>Accomplishments:</strong><ul>${m.keyAccomplishments.map(a => `<li>${a}</li>`).join('')}</ul>` : ''}
                     ${m.blockers?.length ? `<strong>Blockers:</strong><ul>${m.blockers.map(b => `<li>${b}</li>`).join('')}</ul>` : ''}
                     ${m.priorities?.length ? `<strong>Priorities:</strong><ul>${m.priorities.map(p => `<li>${p}</li>`).join('')}</ul>` : ''}
+                    ${m.shoutoutsGiven?.length ? `<strong>Recognition Given:</strong><ul>${m.shoutoutsGiven.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
                 </div>`;
             });
 
