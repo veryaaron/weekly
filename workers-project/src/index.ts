@@ -51,7 +51,10 @@ import {
 } from './routes/workspaces';
 import { handleError, errorResponse, NotFoundError } from './middleware/error';
 import { authenticate, requireAdmin } from './middleware/auth';
-import { createLogger, generateRequestId, logRequest } from './utils/logger';
+import { createLogger, generateRequestId, logRequest, logEmailOperation, logScheduledJob } from './utils/logger';
+import { getAllTeamMembers, getWeeklyStatus, logEmail } from './services/database';
+import { refreshAccessToken, sendEmail } from './services/gmail';
+import { getPromptEmail, getReminderEmail } from './utils/email-templates';
 
 // Re-export Env type for wrangler
 export type { Env };
@@ -482,16 +485,114 @@ export default {
     });
 
     try {
-      // Wednesday 9am UTC - Weekly prompt
-      if (event.cron === '0 9 * * 3') {
-        // TODO: Implement in Phase 4
-        logger.info('Wednesday prompt - not yet implemented');
+      // Validate Gmail secrets are configured
+      if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
+        logger.error('Gmail secrets not configured — skipping email send', undefined, {
+          hasClientId: !!env.GOOGLE_CLIENT_ID,
+          hasClientSecret: !!env.GOOGLE_CLIENT_SECRET,
+          hasRefreshToken: !!env.GOOGLE_REFRESH_TOKEN,
+        });
+        throw new Error('Gmail API secrets not configured. Set GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN.');
       }
 
-      // Thursday 5pm UTC - Reminder
+      // Refresh access token once for the entire batch
+      const accessToken = await refreshAccessToken(
+        env.GOOGLE_CLIENT_ID,
+        env.GOOGLE_CLIENT_SECRET,
+        env.GOOGLE_REFRESH_TOKEN,
+        logger
+      );
+
+      const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
+
+      // =====================================================================
+      // Wednesday 9am UTC — Weekly prompt to all active team members
+      // =====================================================================
+      if (event.cron === '0 9 * * 3') {
+        logger.info('Running Wednesday weekly prompt job');
+
+        const members = await getAllTeamMembers(env.DB);
+        let sentCount = 0;
+        let failedCount = 0;
+
+        for (const member of members) {
+          const firstName = member.first_name || member.name.split(' ')[0];
+          const template = getPromptEmail(firstName, formUrl);
+          const result = await sendEmail(accessToken, member.email, template.subject, template.body, logger);
+
+          logEmailOperation(logger, 'prompt', member.email, result.success, result.messageId, result.error);
+
+          await logEmail(env.DB, {
+            recipientEmail: member.email,
+            recipientName: member.name,
+            emailType: 'prompt',
+            subject: template.subject,
+            bodyPreview: template.body.substring(0, 100),
+            status: result.success ? 'sent' : 'failed',
+            resendId: result.messageId,
+            errorMessage: result.error,
+          });
+
+          if (result.success) sentCount++;
+          else failedCount++;
+        }
+
+        logScheduledJob(logger, 'weekly_prompt', event.cron, true, {
+          total_members: members.length,
+          sent: sentCount,
+          failed: failedCount,
+        });
+      }
+
+      // =====================================================================
+      // Thursday 5pm UTC — Reminder to members who haven't submitted
+      // =====================================================================
       if (event.cron === '0 17 * * 4') {
-        // TODO: Implement in Phase 4
-        logger.info('Thursday reminder - not yet implemented');
+        logger.info('Running Thursday reminder job');
+
+        const status = await getWeeklyStatus(env.DB);
+        const pending = status.members.filter((m) => !m.hasSubmitted);
+
+        if (pending.length === 0) {
+          logger.info('All team members have submitted — no reminders needed', {
+            weekNumber: status.weekNumber,
+            year: status.year,
+            totalMembers: status.totalMembers,
+          });
+        } else {
+          let sentCount = 0;
+          let failedCount = 0;
+
+          for (const member of pending) {
+            const firstName = member.firstName || member.name.split(' ')[0];
+            const template = getReminderEmail(firstName, formUrl);
+            const result = await sendEmail(accessToken, member.email, template.subject, template.body, logger);
+
+            logEmailOperation(logger, 'reminder', member.email, result.success, result.messageId, result.error);
+
+            await logEmail(env.DB, {
+              recipientEmail: member.email,
+              recipientName: member.name,
+              emailType: 'reminder',
+              subject: template.subject,
+              bodyPreview: template.body.substring(0, 100),
+              status: result.success ? 'sent' : 'failed',
+              resendId: result.messageId,
+              errorMessage: result.error,
+            });
+
+            if (result.success) sentCount++;
+            else failedCount++;
+          }
+
+          logScheduledJob(logger, 'weekly_reminder', event.cron, true, {
+            weekNumber: status.weekNumber,
+            year: status.year,
+            pending_count: pending.length,
+            sent: sentCount,
+            failed: failedCount,
+          });
+        }
       }
 
       logger.info('Scheduled job completed successfully');

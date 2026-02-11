@@ -23,6 +23,8 @@ export interface Env {
   RESEND_API_KEY?: string;
   ALLOWED_DOMAINS?: string; // Comma-separated list of allowed email domains
   ANTHROPIC_API_KEY?: string; // For AI-powered report analysis
+  GOOGLE_CLIENT_SECRET?: string; // Worker secret: OAuth2 client secret for Gmail API
+  GOOGLE_REFRESH_TOKEN?: string; // Worker secret: OAuth2 refresh token for Gmail API
 }
 
 // ============================================================================
