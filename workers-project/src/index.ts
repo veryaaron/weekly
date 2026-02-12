@@ -11,7 +11,7 @@
  * Static assets are served via the ASSETS binding
  */
 
-import type { Env, ScheduledEvent } from './types';
+import type { Env, ScheduledEvent, Logger } from './types';
 import { getLandingPage } from './pages/landing';
 import { handleHealthCheck, handlePing, handleHealthStats } from './routes/health';
 import { handleAuthVerify } from './routes/auth';
@@ -217,7 +217,23 @@ async function handleApiRequest(
       return response;
     }
 
-    // Email endpoints (Phase 3)
+    // Email endpoints
+    if (path === '/api/admin/email/prompt' && request.method === 'POST') {
+      const auth = await authenticate(request, env, logger);
+      requireAdmin(auth);
+      const response = await handleSendPromptEmails(env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    if (path === '/api/admin/email/reminder' && request.method === 'POST') {
+      const auth = await authenticate(request, env, logger);
+      requireAdmin(auth);
+      const response = await handleSendReminderEmails(env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
     if (path === '/api/admin/email/chase' && request.method === 'POST') {
       return errorResponse({ code: 'NOT_IMPLEMENTED', message: 'Email endpoint coming in Phase 3' }, 501);
     }
@@ -404,6 +420,117 @@ async function handleApiRequest(
     logRequest(logger, request, response, startTime);
     return response;
   }
+}
+
+// ============================================================================
+// Manual Email Trigger Handlers
+// ============================================================================
+
+/**
+ * Send weekly prompt emails to all active team members.
+ * Used for manual testing / resending from the admin dashboard.
+ */
+async function handleSendPromptEmails(env: Env, logger: Logger): Promise<Response> {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'Gmail API secrets not configured' } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const accessToken = await refreshAccessToken(
+    env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
+  );
+
+  const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
+  const members = await getAllTeamMembers(env.DB);
+  let sentCount = 0;
+  let failedCount = 0;
+
+  for (const member of members) {
+    const firstName = member.first_name || member.name.split(' ')[0];
+    const template = getPromptEmail(firstName, formUrl);
+    const result = await sendEmail(accessToken, member.email, template.subject, template.body, logger);
+
+    logEmailOperation(logger, 'prompt', member.email, result.success, result.messageId, result.error);
+
+    await logEmail(env.DB, {
+      recipientEmail: member.email,
+      recipientName: member.name,
+      emailType: 'prompt',
+      subject: template.subject,
+      bodyPreview: template.body.substring(0, 100),
+      status: result.success ? 'sent' : 'failed',
+      resendId: result.messageId,
+      errorMessage: result.error,
+    });
+
+    if (result.success) sentCount++;
+    else failedCount++;
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, data: { sent: sentCount, failed: failedCount, total: members.length } }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+/**
+ * Send reminder emails to team members who haven't submitted this week.
+ * Used for manual testing / resending from the admin dashboard.
+ */
+async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Response> {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'Gmail API secrets not configured' } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const accessToken = await refreshAccessToken(
+    env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
+  );
+
+  const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
+  const status = await getWeeklyStatus(env.DB);
+  const pending = status.members.filter((m) => !m.hasSubmitted);
+
+  if (pending.length === 0) {
+    return new Response(
+      JSON.stringify({ success: true, data: { sent: 0, failed: 0, total: 0, message: 'Everyone has already submitted' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  let sentCount = 0;
+  let failedCount = 0;
+
+  for (const member of pending) {
+    const firstName = member.firstName || member.name.split(' ')[0];
+    const template = getReminderEmail(firstName, formUrl);
+    const result = await sendEmail(accessToken, member.email, template.subject, template.body, logger);
+
+    logEmailOperation(logger, 'reminder', member.email, result.success, result.messageId, result.error);
+
+    await logEmail(env.DB, {
+      recipientEmail: member.email,
+      recipientName: member.name,
+      emailType: 'reminder',
+      subject: template.subject,
+      bodyPreview: template.body.substring(0, 100),
+      status: result.success ? 'sent' : 'failed',
+      resendId: result.messageId,
+      errorMessage: result.error,
+    });
+
+    if (result.success) sentCount++;
+    else failedCount++;
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, data: { sent: sentCount, failed: failedCount, total: pending.length } }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
 }
 
 // ============================================================================

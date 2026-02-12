@@ -1207,13 +1207,27 @@
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">Submission Status</span>
-                            <button class="btn btn-secondary btn-sm" onclick="loadStatus()">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M23 4v6h-6M1 20v-6h6"/>
-                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                                </svg>
-                                Refresh
-                            </button>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="btn btn-secondary btn-sm" onclick="loadStatus()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M23 4v6h-6M1 20v-6h6"/>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                    </svg>
+                                    Refresh
+                                </button>
+                                <button class="btn btn-primary btn-sm" id="sendPromptBtn" onclick="sendPromptEmails(this)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                                    </svg>
+                                    Send Prompt
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="sendReminderBtn" onclick="sendReminderEmails(this)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
+                                    </svg>
+                                    Send Reminder
+                                </button>
+                            </div>
                         </div>
                         <div class="table-wrapper">
                             <table>
@@ -1775,6 +1789,50 @@
             } catch (err) {
                 console.error('Failed to load status:', err);
                 showToast('Failed to load status', 'error');
+            }
+        }
+
+        // ========================================
+        // Email Triggers (Manual Send)
+        // ========================================
+
+        async function sendPromptEmails(btn) {
+            if (!confirm('Send weekly prompt emails to all active team members?')) return;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Sending...';
+            try {
+                const data = await apiCall('/admin/email/prompt', { method: 'POST' });
+                showToast(`Prompt emails sent: ${data.sent} sent, ${data.failed} failed`);
+                loadStatus();
+            } catch (err) {
+                console.error('Failed to send prompt emails:', err);
+                showToast(err.message || 'Failed to send prompt emails', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function sendReminderEmails(btn) {
+            if (!confirm('Send reminder emails to team members who haven\'t submitted?')) return;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Sending...';
+            try {
+                const data = await apiCall('/admin/email/reminder', { method: 'POST' });
+                if (data.message) {
+                    showToast(data.message);
+                } else {
+                    showToast(`Reminder emails sent: ${data.sent} sent, ${data.failed} failed`);
+                }
+                loadStatus();
+            } catch (err) {
+                console.error('Failed to send reminder emails:', err);
+                showToast(err.message || 'Failed to send reminder emails', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 
