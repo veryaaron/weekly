@@ -2,6 +2,15 @@ name = "weekly"
 main = "src/index.ts"
 compatibility_date = "2025-02-04"
 
+# Observability - persistent logs for debugging
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+
 # Environment variables
 [vars]
 ENVIRONMENT = "development"

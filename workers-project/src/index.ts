@@ -541,12 +541,32 @@ async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Respo
 async function handleSendSingleEmail(request: Request, env: Env, logger: Logger): Promise<Response> {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
     return new Response(
-      JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'Gmail API secrets not configured' } }),
+      JSON.stringify({
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: 'Gmail API secrets not configured',
+          detail: {
+            hasClientId: !!env.GOOGLE_CLIENT_ID,
+            hasClientSecret: !!env.GOOGLE_CLIENT_SECRET,
+            hasRefreshToken: !!env.GOOGLE_REFRESH_TOKEN,
+          },
+        },
+      }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  const body = (await request.json()) as { email?: string; type?: string };
+  let body: { email?: string; type?: string };
+  try {
+    body = (await request.json()) as { email?: string; type?: string };
+  } catch {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Invalid JSON body' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const email = body.email;
   const emailType = body.type;
 
@@ -562,9 +582,20 @@ async function handleSendSingleEmail(request: Request, env: Env, logger: Logger)
   const memberName = member?.name || email.split('@')[0];
   const firstName = member?.first_name || memberName.split(' ')[0];
 
-  const accessToken = await refreshAccessToken(
-    env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
-  );
+  // Refresh access token — surface the actual error if this fails
+  let accessToken: string;
+  try {
+    accessToken = await refreshAccessToken(
+      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Token refresh failed in send handler', error instanceof Error ? error : undefined);
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'TOKEN_ERROR', message: `Gmail token refresh failed: ${message}` } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
   const template = emailType === 'prompt'
