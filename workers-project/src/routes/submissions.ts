@@ -12,6 +12,9 @@ import {
   getPreviousWeekSubmission,
   upsertSubmission,
   getTeamMemberByEmail,
+  getUserWorkspaces,
+  findOrCreateWorkspaceMember,
+  upsertWorkspaceSubmission,
 } from '../services/database';
 import { getCurrentWeekInfo, getPreviousWeekInfo } from '../utils/week';
 
@@ -103,7 +106,7 @@ export async function handleSubmitFeedback(
   aiSummary = generateSimpleSummary(data.accomplishments, data.blockers, data.priorities);
   aiQuestion = generateSimpleQuestion(data.priorities, data.blockers);
 
-  // Create or update submission
+  // Create or update submission (legacy table)
   const submission = await upsertSubmission(env.DB, auth.teamMember.id, {
     accomplishments: data.accomplishments,
     previousWeekProgress: data.previousWeekProgress,
@@ -114,6 +117,34 @@ export async function handleSubmitFeedback(
     aiQuestion,
     aiAnswer: data.aiAnswer,
   });
+
+  // Also write to workspace_submissions so the admin dashboard sees it
+  try {
+    const workspaces = await getUserWorkspaces(env.DB, auth.user.email);
+    for (const ws of workspaces) {
+      const wsMember = await findOrCreateWorkspaceMember(
+        env.DB,
+        ws.id,
+        auth.user.email,
+        auth.user.name,
+        auth.user.givenName
+      );
+      await upsertWorkspaceSubmission(env.DB, ws.id, wsMember.id, {
+        accomplishments: data.accomplishments,
+        previousWeekProgress: data.previousWeekProgress,
+        blockers: data.blockers,
+        priorities: data.priorities,
+        shoutouts: data.shoutouts,
+        aiSummary,
+        aiQuestion,
+        aiAnswer: data.aiAnswer,
+      });
+      logger.info('Synced submission to workspace', { workspaceId: ws.id, memberId: wsMember.id });
+    }
+  } catch (wsError) {
+    // Don't fail the main submission if workspace sync fails
+    logger.warn('Failed to sync submission to workspace_submissions', { error: wsError });
+  }
 
   const response: SubmitFeedbackResponse = {
     id: submission.id,
