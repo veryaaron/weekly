@@ -817,14 +817,17 @@
             gap: 8px;
         }
 
-        .btn-view {
-            background: var(--brand-navy);
-            color: white;
-            border: none;
+        .submission-link {
+            color: var(--brand-navy);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.15s;
         }
 
-        .btn-view:hover {
-            background: #3a3470;
+        .submission-link:hover {
+            color: #3a3470;
+            text-decoration: underline;
         }
 
         /* Enhanced Report Viewer */
@@ -1905,10 +1908,9 @@
                             <td>${escapeHtml(s.member_name)}</td>
                             <td>${escapeHtml(s.member_email)}</td>
                             <td><span class="badge badge-info">${escapeHtml(s.workspace_name)}</span></td>
-                            <td>${formatDate(s.submitted_at)}</td>
+                            <td><a href="#" class="submission-link" onclick="event.preventDefault(); viewSubmission('${escapeHtml(s.member_email)}')">${formatDate(s.submitted_at)}</a></td>
                             <td>
                                 <div style="display: flex; gap: 4px;">
-                                    <button class="btn btn-view btn-sm" onclick="viewSubmission('${escapeHtml(s.member_email)}')" title="View submission">View</button>
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(s.member_email)}', 'prompt')" title="Send prompt email">Prompt</button>
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(s.member_email)}', 'reminder')" title="Send reminder email">Remind</button>
                                 </div>
@@ -1949,10 +1951,11 @@
                                     ${m.hasSubmitted ? 'Submitted' : 'Pending'}
                                 </span>
                             </td>
-                            <td>${m.submittedAt ? formatDate(m.submittedAt) : '-'}</td>
+                            <td>${m.hasSubmitted
+                                ? `<a href="#" class="submission-link" onclick="event.preventDefault(); viewSubmission('${escapeHtml(m.email)}')">${formatDate(m.submittedAt)}</a>`
+                                : '-'}</td>
                             <td>
                                 <div style="display: flex; gap: 4px;">
-                                    ${m.hasSubmitted ? `<button class="btn btn-view btn-sm" onclick="viewSubmission('${escapeHtml(m.email)}')" title="View submission">View</button>` : ''}
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(m.email)}', 'prompt')" title="Send prompt email">Prompt</button>
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(m.email)}', 'reminder')" title="Send reminder email">Remind</button>
                                 </div>
