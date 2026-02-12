@@ -52,7 +52,7 @@ import {
 import { handleError, errorResponse, NotFoundError } from './middleware/error';
 import { authenticate, requireAdmin } from './middleware/auth';
 import { createLogger, generateRequestId, logRequest, logEmailOperation, logScheduledJob } from './utils/logger';
-import { getAllTeamMembers, getWeeklyStatus, logEmail } from './services/database';
+import { getAllTeamMembers, getTeamMemberByEmail, getWeeklyStatus, logEmail } from './services/database';
 import { refreshAccessToken, sendEmail } from './services/gmail';
 import { getPromptEmail, getReminderEmail } from './utils/email-templates';
 
@@ -234,12 +234,13 @@ async function handleApiRequest(
       return response;
     }
 
-    if (path === '/api/admin/email/chase' && request.method === 'POST') {
-      return errorResponse({ code: 'NOT_IMPLEMENTED', message: 'Email endpoint coming in Phase 3' }, 501);
-    }
-
-    if (path === '/api/admin/email/bulk' && request.method === 'POST') {
-      return errorResponse({ code: 'NOT_IMPLEMENTED', message: 'Email endpoint coming in Phase 3' }, 501);
+    // Send to a single member: POST /api/admin/email/send { email, type: 'prompt'|'reminder' }
+    if (path === '/api/admin/email/send' && request.method === 'POST') {
+      const auth = await authenticate(request, env, logger);
+      requireAdmin(auth);
+      const response = await handleSendSingleEmail(request, env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
     }
 
     // Settings endpoints
@@ -529,6 +530,71 @@ async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Respo
 
   return new Response(
     JSON.stringify({ success: true, data: { sent: sentCount, failed: failedCount, total: pending.length } }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+/**
+ * Send a single email (prompt or reminder) to one team member.
+ * Body: { email: string, type: 'prompt' | 'reminder' }
+ */
+async function handleSendSingleEmail(request: Request, env: Env, logger: Logger): Promise<Response> {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'Gmail API secrets not configured' } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const body = (await request.json()) as { email?: string; type?: string };
+  const email = body.email;
+  const emailType = body.type;
+
+  if (!email || !emailType || (emailType !== 'prompt' && emailType !== 'reminder')) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Required: email (string), type ("prompt" or "reminder")' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Look up member to get their name
+  const member = await getTeamMemberByEmail(env.DB, email);
+  const memberName = member?.name || email.split('@')[0];
+  const firstName = member?.first_name || memberName.split(' ')[0];
+
+  const accessToken = await refreshAccessToken(
+    env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
+  );
+
+  const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
+  const template = emailType === 'prompt'
+    ? getPromptEmail(firstName, formUrl)
+    : getReminderEmail(firstName, formUrl);
+
+  const result = await sendEmail(accessToken, email, template.subject, template.body, logger);
+
+  logEmailOperation(logger, emailType, email, result.success, result.messageId, result.error);
+
+  await logEmail(env.DB, {
+    recipientEmail: email,
+    recipientName: memberName,
+    emailType: emailType,
+    subject: template.subject,
+    bodyPreview: template.body.substring(0, 100),
+    status: result.success ? 'sent' : 'failed',
+    resendId: result.messageId,
+    errorMessage: result.error,
+  });
+
+  if (!result.success) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'SEND_FAILED', message: result.error } }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, data: { email, type: emailType, messageId: result.messageId } }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   );
 }

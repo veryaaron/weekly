@@ -1237,6 +1237,7 @@
                                         <th>Email</th>
                                         <th>Status</th>
                                         <th>Submitted</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="statusTableBody">
@@ -1744,7 +1745,7 @@
 
                     const tbody = document.getElementById('statusTableBody');
                     if (data.submissions.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No submissions found</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No submissions found</td></tr>';
                         return;
                     }
 
@@ -1754,6 +1755,12 @@
                             <td>${escapeHtml(s.member_email)}</td>
                             <td><span class="badge badge-info">${escapeHtml(s.workspace_name)}</span></td>
                             <td>${formatDate(s.submitted_at)}</td>
+                            <td>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(s.member_email)}', 'prompt')" title="Send prompt email">Prompt</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(s.member_email)}', 'reminder')" title="Send reminder email">Remind</button>
+                                </div>
+                            </td>
                         </tr>
                     `).join('');
                 } else {
@@ -1768,7 +1775,7 @@
                     const tbody = document.getElementById('statusTableBody');
 
                     if (data.members.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No team members found</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No team members found</td></tr>';
                         return;
                     }
 
@@ -1782,6 +1789,12 @@
                                 </span>
                             </td>
                             <td>${m.submittedAt ? formatDate(m.submittedAt) : '-'}</td>
+                            <td>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(m.email)}', 'prompt')" title="Send prompt email">Prompt</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(m.email)}', 'reminder')" title="Send reminder email">Remind</button>
+                                </div>
+                            </td>
                         </tr>
                     `).join('');
                 }
@@ -1830,6 +1843,26 @@
             } catch (err) {
                 console.error('Failed to send reminder emails:', err);
                 showToast(err.message || 'Failed to send reminder emails', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function sendSingleEmail(btn, email, type) {
+            const label = type === 'prompt' ? 'prompt' : 'reminder';
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '...';
+            try {
+                await apiCall('/admin/email/send', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, type })
+                });
+                showToast(`${label.charAt(0).toUpperCase() + label.slice(1)} sent to ${email}`);
+            } catch (err) {
+                console.error(`Failed to send ${label} to ${email}:`, err);
+                showToast(err.message || `Failed to send ${label}`, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
