@@ -1085,6 +1085,8 @@ export async function getPreviousWorkspaceSubmission(
 
 /**
  * Get all workspace submissions for a specific week
+ * Checks both workspace_submissions AND the legacy submissions table,
+ * preferring workspace_submissions data when both exist.
  */
 export async function getWorkspaceSubmissionsForWeek(
   db: D1Database,
@@ -1092,15 +1094,45 @@ export async function getWorkspaceSubmissionsForWeek(
   weekNumber: number,
   year: number
 ): Promise<(WorkspaceSubmission & { member_name: string; member_email: string })[]> {
+  // Use a UNION to pull from both tables, deduplicating by email
+  // workspace_submissions takes priority (listed first, dedup keeps first)
   const result = await db
     .prepare(
-      `SELECT ws.*, wm.name as member_name, wm.email as member_email
-       FROM workspace_submissions ws
-       JOIN workspace_members wm ON ws.workspace_member_id = wm.id
-       WHERE ws.workspace_id = ? AND ws.week_number = ? AND ws.year = ?
-       ORDER BY ws.submitted_at DESC`
+      `SELECT * FROM (
+        SELECT ws.id, ws.workspace_id, ws.workspace_member_id, ws.week_number, ws.year,
+               ws.accomplishments, ws.previous_week_progress, ws.blockers, ws.priorities,
+               ws.shoutouts, ws.ai_summary, ws.ai_question, ws.ai_answer, ws.submitted_at,
+               wm.name as member_name, wm.email as member_email
+        FROM workspace_submissions ws
+        JOIN workspace_members wm ON ws.workspace_member_id = wm.id
+        WHERE ws.workspace_id = ? AND ws.week_number = ? AND ws.year = ?
+
+        UNION ALL
+
+        SELECT 'legacy_' || s.id, ?, tm.id, s.week_number, s.year,
+               s.accomplishments, s.previous_week_progress, s.blockers, s.priorities,
+               s.shoutouts, s.ai_summary, s.ai_question, s.ai_answer, s.submitted_at,
+               wm2.name as member_name, wm2.email as member_email
+        FROM submissions s
+        JOIN team_members tm ON s.team_member_id = tm.id
+        JOIN workspace_members wm2 ON LOWER(tm.email) = LOWER(wm2.email)
+          AND wm2.workspace_id = ?
+        WHERE s.week_number = ? AND s.year = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM workspace_submissions ws2
+          WHERE ws2.workspace_id = ?
+            AND ws2.workspace_member_id = wm2.id
+            AND ws2.week_number = s.week_number
+            AND ws2.year = s.year
+        )
+      ) combined
+      ORDER BY submitted_at DESC`
     )
-    .bind(workspaceId, weekNumber, year)
+    .bind(
+      workspaceId, weekNumber, year,
+      workspaceId, workspaceId, weekNumber, year,
+      workspaceId
+    )
     .all<WorkspaceSubmission & { member_name: string; member_email: string }>();
 
   return result.results || [];
@@ -1232,6 +1264,8 @@ export interface WorkspaceWeeklyStatus {
 
 /**
  * Get the status of submissions for the current week in a workspace
+ * Checks both workspace_submissions AND the legacy submissions table
+ * (the form writes to submissions; workspace_submissions may also have data from migration)
  */
 export async function getWorkspaceWeeklyStatus(
   db: D1Database,
@@ -1240,6 +1274,7 @@ export async function getWorkspaceWeeklyStatus(
   const { weekNumber, year } = getCurrentWeekInfo();
 
   // Get all active workspace members with their submission status
+  // Check both workspace_submissions and legacy submissions (via email → team_members)
   const result = await db
     .prepare(
       `SELECT
@@ -1247,14 +1282,17 @@ export async function getWorkspaceWeeklyStatus(
          wm.email,
          wm.name,
          wm.first_name,
-         ws.submitted_at
+         COALESCE(ws.submitted_at, s.submitted_at) AS submitted_at
        FROM workspace_members wm
        LEFT JOIN workspace_submissions ws ON wm.id = ws.workspace_member_id
          AND ws.workspace_id = ? AND ws.week_number = ? AND ws.year = ?
+       LEFT JOIN team_members tm ON LOWER(wm.email) = LOWER(tm.email)
+       LEFT JOIN submissions s ON tm.id = s.team_member_id
+         AND s.week_number = ? AND s.year = ?
        WHERE wm.workspace_id = ? AND wm.active = 1
        ORDER BY wm.name`
     )
-    .bind(workspaceId, weekNumber, year, workspaceId)
+    .bind(workspaceId, weekNumber, year, weekNumber, year, workspaceId)
     .all<{
       id: string;
       email: string;

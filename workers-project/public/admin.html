@@ -1648,13 +1648,16 @@
                 select.appendChild(option);
             });
 
-            // Select first workspace or "all" for super admin
-            if (isSuperAdmin) {
+            // Default to the user's own workspace (or first available), keep "all" as an option
+            if (workspaces.length > 0) {
+                // Prefer the user's own workspace
+                const ownWorkspace = workspaces.find(ws => ws.manager_email === currentUser.email.toLowerCase());
+                const defaultWs = ownWorkspace || workspaces[0];
+                select.value = defaultWs.id;
+                currentWorkspaceId = defaultWs.id;
+            } else if (isSuperAdmin) {
                 select.value = 'all';
                 currentWorkspaceId = 'all';
-            } else if (workspaces.length > 0) {
-                select.value = workspaces[0].id;
-                currentWorkspaceId = workspaces[0].id;
             }
         }
 
