@@ -687,6 +687,146 @@
             background: var(--brand-red);
         }
 
+        /* Submission Viewer Modal */
+        .submission-modal {
+            max-width: 640px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .submission-modal .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .submission-person {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 20px 24px;
+            background: linear-gradient(135deg, var(--brand-navy) 0%, #3d3773 100%);
+            color: white;
+        }
+
+        .submission-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .submission-person-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .submission-person-info p {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        .submission-sections {
+            padding: 8px 24px 24px;
+        }
+
+        .submission-section {
+            margin-top: 20px;
+        }
+
+        .submission-section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .submission-section-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .submission-section-icon.accomplishments { background: #d1fae5; }
+        .submission-section-icon.progress { background: #dbeafe; }
+        .submission-section-icon.blockers { background: #fee2e2; }
+        .submission-section-icon.priorities { background: #fef3c7; }
+        .submission-section-icon.shoutouts { background: #ede9fe; }
+        .submission-section-icon.ai { background: #f3f4f6; }
+
+        .submission-section-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-500);
+        }
+
+        .submission-section-content {
+            font-size: 14px;
+            color: var(--gray-700);
+            line-height: 1.7;
+            white-space: pre-wrap;
+            padding: 12px 16px;
+            background: var(--gray-50);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--gray-200);
+        }
+
+        .submission-section-content.accomplishments { border-left-color: #10b981; }
+        .submission-section-content.progress { border-left-color: #3b82f6; }
+        .submission-section-content.blockers { border-left-color: #ef4444; }
+        .submission-section-content.priorities { border-left-color: #f59e0b; }
+        .submission-section-content.shoutouts { border-left-color: #8b5cf6; }
+        .submission-section-content.ai { border-left-color: var(--gray-400); }
+
+        .submission-empty {
+            color: var(--gray-400);
+            font-style: italic;
+        }
+
+        .submission-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            border-top: 1px solid var(--gray-100);
+            background: var(--gray-50);
+        }
+
+        .submission-timestamp {
+            font-size: 12px;
+            color: var(--gray-400);
+        }
+
+        .submission-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-view {
+            background: var(--brand-navy);
+            color: white;
+            border: none;
+        }
+
+        .btn-view:hover {
+            background: #3a3470;
+        }
+
         /* Enhanced Report Viewer */
         .report-modal {
             max-width: 900px;
@@ -1427,6 +1567,19 @@
         </div>
     </div>
 
+    <!-- View Submission Modal -->
+    <div class="modal-overlay" id="submissionModal">
+        <div class="modal submission-modal">
+            <div class="modal-header">
+                <span class="modal-title" id="submissionModalTitle">Submission</span>
+                <button class="modal-close" onclick="closeSubmissionModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="submissionModalBody">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
     <!-- View Report Modal - Enhanced AI Report -->
     <div class="modal-overlay" id="reportModal">
         <div class="modal report-modal">
@@ -1470,6 +1623,7 @@
         let isSuperAdmin = false;
         let workspaces = [];
         let currentWorkspaceId = null;
+        let cachedSubmissions = [];
         let teamMembers = [];
         let memberActiveState = true;
         let settings = {
@@ -1743,6 +1897,9 @@
                         return;
                     }
 
+                    // Cache super admin submissions for viewing
+                    cachedSubmissions = data.submissions;
+
                     tbody.innerHTML = data.submissions.map(s => `
                         <tr>
                             <td>${escapeHtml(s.member_name)}</td>
@@ -1751,6 +1908,7 @@
                             <td>${formatDate(s.submitted_at)}</td>
                             <td>
                                 <div style="display: flex; gap: 4px;">
+                                    <button class="btn btn-view btn-sm" onclick="viewSubmission('${escapeHtml(s.member_email)}')" title="View submission">View</button>
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(s.member_email)}', 'prompt')" title="Send prompt email">Prompt</button>
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(s.member_email)}', 'reminder')" title="Send reminder email">Remind</button>
                                 </div>
@@ -1760,6 +1918,15 @@
                 } else {
                     // Regular workspace status
                     data = await apiCall(`/workspaces/${currentWorkspaceId}/status`);
+
+                    // Also fetch full submission data for the viewer
+                    try {
+                        const subData = await apiCall(`/workspaces/${currentWorkspaceId}/submissions`);
+                        cachedSubmissions = subData.submissions || [];
+                    } catch (e) {
+                        console.warn('Could not fetch submissions for viewer:', e);
+                        cachedSubmissions = [];
+                    }
 
                     document.getElementById('statWeek').textContent = data.weekNumber;
                     document.getElementById('statSubmitted').textContent = data.submittedCount;
@@ -1785,6 +1952,7 @@
                             <td>${m.submittedAt ? formatDate(m.submittedAt) : '-'}</td>
                             <td>
                                 <div style="display: flex; gap: 4px;">
+                                    ${m.hasSubmitted ? `<button class="btn btn-view btn-sm" onclick="viewSubmission('${escapeHtml(m.email)}')" title="View submission">View</button>` : ''}
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(m.email)}', 'prompt')" title="Send prompt email">Prompt</button>
                                     <button class="btn btn-secondary btn-sm" onclick="sendSingleEmail(this, '${escapeHtml(m.email)}', 'reminder')" title="Send reminder email">Remind</button>
                                 </div>
@@ -1862,6 +2030,91 @@
                 btn.innerHTML = originalText;
             }
         }
+
+        // ========================================
+        // Submission Viewer
+        // ========================================
+        function viewSubmission(email) {
+            const submission = cachedSubmissions.find(s =>
+                (s.member_email || '').toLowerCase() === email.toLowerCase()
+            );
+
+            if (!submission) {
+                showToast('Submission data not found. Try refreshing.', 'error');
+                return;
+            }
+
+            const name = submission.member_name || email;
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            const submittedDate = submission.submitted_at ? formatDate(submission.submitted_at) : 'Unknown';
+
+            // Build sorted list of submitted emails for prev/next navigation
+            const submittedEmails = cachedSubmissions.map(s => (s.member_email || '').toLowerCase());
+            const currentIdx = submittedEmails.indexOf(email.toLowerCase());
+            const prevEmail = currentIdx > 0 ? submittedEmails[currentIdx - 1] : null;
+            const nextEmail = currentIdx < submittedEmails.length - 1 ? submittedEmails[currentIdx + 1] : null;
+
+            const sections = [
+                { key: 'accomplishments', label: 'Key Accomplishments', icon: '&#x2714;', content: submission.accomplishments },
+                { key: 'progress', label: 'Progress on Last Week', icon: '&#x2192;', content: submission.previous_week_progress },
+                { key: 'blockers', label: 'Blockers & Challenges', icon: '&#x26A0;', content: submission.blockers },
+                { key: 'priorities', label: 'Priorities', icon: '&#x2605;', content: submission.priorities },
+                { key: 'shoutouts', label: 'Shoutouts & Recognition', icon: '&#x2764;', content: submission.shoutouts },
+                { key: 'ai', label: 'AI Follow-up', icon: '&#x1F4AC;', content: submission.ai_answer },
+            ];
+
+            const sectionsHtml = sections
+                .filter(s => s.content && s.content.trim().length > 0)
+                .map(s => `
+                    <div class="submission-section">
+                        <div class="submission-section-header">
+                            <div class="submission-section-icon ${s.key}">${s.icon}</div>
+                            <span class="submission-section-label">${s.label}</span>
+                        </div>
+                        <div class="submission-section-content ${s.key}">${escapeHtml(s.content)}</div>
+                    </div>
+                `).join('');
+
+            const modalBody = document.getElementById('submissionModalBody');
+            modalBody.innerHTML = `
+                <div class="submission-person">
+                    <div class="submission-avatar">${initials}</div>
+                    <div class="submission-person-info">
+                        <h3>${escapeHtml(name)}</h3>
+                        <p>${escapeHtml(email)}</p>
+                    </div>
+                </div>
+                <div class="submission-sections">
+                    ${sectionsHtml || '<p class="submission-empty">No content in this submission.</p>'}
+                </div>
+                <div class="submission-footer">
+                    <span class="submission-timestamp">Submitted ${submittedDate}</span>
+                    <div class="submission-nav">
+                        <button class="btn btn-secondary btn-sm" ${prevEmail ? `onclick="viewSubmission('${escapeHtml(prevEmail)}')"` : 'disabled'} title="Previous submission">&larr; Prev</button>
+                        <button class="btn btn-secondary btn-sm" ${nextEmail ? `onclick="viewSubmission('${escapeHtml(nextEmail)}')"` : 'disabled'} title="Next submission">Next &rarr;</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('submissionModalTitle').textContent = `${name}'s Submission`;
+            document.getElementById('submissionModal').classList.add('open');
+        }
+
+        function closeSubmissionModal() {
+            document.getElementById('submissionModal').classList.remove('open');
+        }
+
+        // Close submission modal on overlay click
+        document.getElementById('submissionModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSubmissionModal();
+        });
+
+        // Close submission modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('submissionModal').classList.contains('open')) {
+                closeSubmissionModal();
+            }
+        });
 
         // ========================================
         // Team Members
