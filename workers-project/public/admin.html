@@ -1612,11 +1612,6 @@
                 // Populate workspace selector
                 populateWorkspaceSelector();
 
-                // Set initial workspace
-                if (workspaces.length > 0) {
-                    currentWorkspaceId = workspaces[0].id;
-                }
-
                 // Show dashboard
                 document.getElementById('authCard').style.display = 'none';
                 document.getElementById('dashboard').classList.add('visible');
