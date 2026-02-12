@@ -439,9 +439,19 @@ async function handleSendPromptEmails(env: Env, logger: Logger): Promise<Respons
     );
   }
 
-  const accessToken = await refreshAccessToken(
-    env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
-  );
+  let accessToken: string;
+  try {
+    accessToken = await refreshAccessToken(
+      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Token refresh failed in prompt handler', error instanceof Error ? error : undefined);
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'TOKEN_ERROR', message: `Gmail token refresh failed: ${message}` } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
   const members = await getAllTeamMembers(env.DB);
@@ -488,9 +498,19 @@ async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Respo
     );
   }
 
-  const accessToken = await refreshAccessToken(
-    env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
-  );
+  let accessToken: string;
+  try {
+    accessToken = await refreshAccessToken(
+      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('Token refresh failed in reminder handler', error instanceof Error ? error : undefined);
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'TOKEN_ERROR', message: `Gmail token refresh failed: ${message}` } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
   const status = await getWeeklyStatus(env.DB);
