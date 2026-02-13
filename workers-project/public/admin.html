@@ -2983,8 +2983,7 @@
             loadingEl.style.display = 'block';
 
             try {
-                const resp = await apiCall('/admin/email/test-config', { method: 'POST' });
-                const d = resp.data;
+                const d = await apiCall('/admin/email/test-config', { method: 'POST' });
                 let html = '';
 
                 const check = (ok, label) => `
@@ -3048,18 +3047,16 @@
                     body: JSON.stringify({ managerEmail: email })
                 });
 
-                if (resp.success && resp.data.tokenObtained) {
+                if (resp.tokenObtained) {
                     resultEl.innerHTML = `
                         <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); color: #065f46; font-size: 14px;">
-                            <strong>Success!</strong> ${escapeHtml(resp.data.message)}<br>
-                            <span style="font-size: 12px; color: #047857;">Token preview: ${escapeHtml(resp.data.tokenPreview)} | ${resp.data.elapsedMs}ms</span>
+                            <strong>Success!</strong> ${escapeHtml(resp.message)}<br>
+                            <span style="font-size: 12px; color: #047857;">Token preview: ${escapeHtml(resp.tokenPreview)} | ${resp.elapsedMs}ms</span>
                         </div>`;
                 } else {
-                    const err = resp.error || {};
                     resultEl.innerHTML = `
                         <div style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #991b1b; font-size: 14px;">
-                            <strong>Failed:</strong> ${escapeHtml(err.message || 'Unknown error')}<br>
-                            ${err.hint ? `<span style="font-size: 12px; color: #b91c1c; margin-top: 8px; display: block;">${escapeHtml(err.hint)}</span>` : ''}
+                            <strong>Failed:</strong> ${escapeHtml(resp.message || 'Unknown error')}
                         </div>`;
                 }
                 resultEl.style.display = 'block';
@@ -3098,20 +3095,11 @@
                     })
                 });
 
-                if (resp.success) {
-                    resultEl.innerHTML = `
-                        <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); color: #065f46; font-size: 14px;">
-                            <strong>Email sent!</strong> ${escapeHtml(resp.data.message)}<br>
-                            <span style="font-size: 12px; color: #047857;">Message ID: ${escapeHtml(resp.data.messageId)} | Auth: ${escapeHtml(resp.data.authMethod)}</span>
-                        </div>`;
-                } else {
-                    const err = resp.error || {};
-                    resultEl.innerHTML = `
-                        <div style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #991b1b; font-size: 14px;">
-                            <strong>Send failed:</strong> ${escapeHtml(err.message || 'Unknown error')}
-                            ${err.authMethod ? `<br><span style="font-size: 12px;">Auth method: ${escapeHtml(err.authMethod)}</span>` : ''}
-                        </div>`;
-                }
+                resultEl.innerHTML = `
+                    <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); color: #065f46; font-size: 14px;">
+                        <strong>Email sent!</strong> ${escapeHtml(resp.message)}<br>
+                        <span style="font-size: 12px; color: #047857;">Message ID: ${escapeHtml(resp.messageId)} | Auth: ${escapeHtml(resp.authMethod)}</span>
+                    </div>`;
                 resultEl.style.display = 'block';
             } catch (err) {
                 resultEl.innerHTML = `<div style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #991b1b;">${escapeHtml(err.message || 'Request failed')}</div>`;
@@ -3142,11 +3130,9 @@
                     body: JSON.stringify({ templateType, firstName, managerName })
                 });
 
-                if (resp.success) {
-                    document.getElementById('previewSubject').textContent = resp.data.subject;
-                    document.getElementById('previewBody').textContent = resp.data.body;
-                    document.getElementById('previewResult').style.display = 'block';
-                }
+                document.getElementById('previewSubject').textContent = resp.subject;
+                document.getElementById('previewBody').textContent = resp.body;
+                document.getElementById('previewResult').style.display = 'block';
             } catch (err) {
                 showToast(err.message || 'Preview failed', 'error');
             }
