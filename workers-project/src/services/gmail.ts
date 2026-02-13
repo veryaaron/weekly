@@ -1,8 +1,9 @@
 /**
  * Gmail API Service
  *
- * Handles OAuth2 token refresh and email sending via Gmail REST API.
- * Used by the scheduled handler to send weekly prompt and reminder emails.
+ * Handles email sending via Gmail REST API with two auth modes:
+ * 1. Service Account with domain-wide delegation (preferred, multi-manager)
+ * 2. Legacy OAuth2 refresh token (fallback, single-user)
  */
 
 import type { Logger } from '../types';
@@ -13,6 +14,8 @@ import type { Logger } from '../types';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GMAIL_SEND_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
+const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
+const JWT_LIFETIME_SECONDS = 3600; // 1 hour
 
 // ============================================================================
 // Types
@@ -29,6 +32,28 @@ export interface SendResult {
   success: boolean;
   messageId?: string;
   error?: string;
+}
+
+interface ServiceAccountKey {
+  type: string;
+  project_id: string;
+  private_key_id: string;
+  private_key: string;
+  client_email: string;
+  client_id: string;
+  auth_uri: string;
+  token_uri: string;
+}
+
+export interface ConfigValidationResult {
+  valid: boolean;
+  hasServiceAccountKey: boolean;
+  serviceAccountEmail?: string;
+  privateKeyValid: boolean;
+  requiredFieldsPresent: boolean;
+  hasOAuthFallback: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
 // ============================================================================
@@ -76,6 +101,254 @@ export async function refreshAccessToken(
   });
 
   return data.access_token;
+}
+
+// ============================================================================
+// Service Account JWT Auth (Domain-Wide Delegation)
+// ============================================================================
+
+/**
+ * Base64url encode a string or ArrayBuffer.
+ */
+function base64urlEncode(data: string | ArrayBuffer): string {
+  let base64: string;
+  if (typeof data === 'string') {
+    base64 = btoa(data);
+  } else {
+    // ArrayBuffer → binary string → base64
+    const bytes = new Uint8Array(data);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    base64 = btoa(binary);
+  }
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Parse a PEM-encoded PKCS#8 private key and import it as a CryptoKey
+ * for signing JWTs with RSASSA-PKCS1-v1_5 SHA-256.
+ */
+async function parsePemPrivateKey(pem: string): Promise<CryptoKey> {
+  // Strip PEM headers and whitespace
+  const pemBody = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/[\n\r\s]/g, '');
+
+  // Decode base64 to binary
+  const binaryString = atob(pemBody);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  // Import as PKCS#8 RSA key
+  return crypto.subtle.importKey(
+    'pkcs8',
+    bytes.buffer,
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
+    false, // not extractable
+    ['sign']
+  );
+}
+
+/**
+ * Build and sign a JWT for Google's OAuth2 token endpoint.
+ * Used for service account authentication with domain-wide delegation.
+ */
+async function buildSignedJwt(
+  serviceAccountEmail: string,
+  privateKey: CryptoKey,
+  managerEmail: string,
+  privateKeyId: string
+): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+    kid: privateKeyId,
+  };
+
+  const payload = {
+    iss: serviceAccountEmail,
+    sub: managerEmail, // Impersonate this user
+    scope: GMAIL_SEND_SCOPE,
+    aud: GOOGLE_TOKEN_URL,
+    iat: now,
+    exp: now + JWT_LIFETIME_SECONDS,
+  };
+
+  const headerB64 = base64urlEncode(JSON.stringify(header));
+  const payloadB64 = base64urlEncode(JSON.stringify(payload));
+  const signatureBase = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    privateKey,
+    signatureBase
+  );
+
+  const signatureB64 = base64urlEncode(signature);
+  return `${headerB64}.${payloadB64}.${signatureB64}`;
+}
+
+/**
+ * Parse and validate a service account JSON key string.
+ */
+function parseServiceAccountKey(keyJson: string): ServiceAccountKey {
+  const key = JSON.parse(keyJson) as ServiceAccountKey;
+
+  const required = ['private_key', 'client_email', 'private_key_id'] as const;
+  const missing = required.filter((field) => !key[field]);
+  if (missing.length > 0) {
+    throw new Error(`Service account key missing required fields: ${missing.join(', ')}`);
+  }
+
+  return key;
+}
+
+/**
+ * Get an access token using a service account with domain-wide delegation.
+ * The `managerEmail` is the user to impersonate (emails will be sent as this user).
+ */
+export async function getServiceAccountAccessToken(
+  keyJson: string,
+  managerEmail: string,
+  logger: Logger
+): Promise<string> {
+  logger.info('Getting service account access token', {
+    managerEmail,
+  });
+
+  const key = parseServiceAccountKey(keyJson);
+  const privateKey = await parsePemPrivateKey(key.private_key);
+  const jwt = await buildSignedJwt(key.client_email, privateKey, managerEmail, key.private_key_id);
+
+  const body = new URLSearchParams({
+    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+    assertion: jwt,
+  });
+
+  const response = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Service account token exchange failed', undefined, {
+      status: response.status,
+      managerEmail,
+      serviceAccount: key.client_email,
+      response: errorText,
+    });
+    throw new Error(`Service account token exchange failed (${response.status}): ${errorText}`);
+  }
+
+  const data = (await response.json()) as TokenResponse;
+  logger.info('Service account access token obtained', {
+    managerEmail,
+    serviceAccount: key.client_email,
+    expires_in: data.expires_in,
+  });
+
+  return data.access_token;
+}
+
+/**
+ * Send an email as a workspace manager using the service account.
+ * Returns a result object (never throws) so batch operations can continue.
+ */
+export async function sendAsManager(
+  keyJson: string,
+  managerEmail: string,
+  to: string,
+  subject: string,
+  body: string,
+  logger: Logger
+): Promise<SendResult> {
+  try {
+    const accessToken = await getServiceAccountAccessToken(keyJson, managerEmail, logger);
+    return await sendEmail(accessToken, to, subject, body, logger);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('sendAsManager failed', error instanceof Error ? error : undefined, {
+      managerEmail,
+      recipient: to,
+    });
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Validate a service account key without attempting token exchange.
+ * Used by the test page to check configuration.
+ */
+export async function validateServiceAccountKey(
+  keyJson: string | undefined,
+  hasOAuthFallback: boolean,
+  logger: Logger
+): Promise<ConfigValidationResult> {
+  const result: ConfigValidationResult = {
+    valid: false,
+    hasServiceAccountKey: false,
+    privateKeyValid: false,
+    requiredFieldsPresent: false,
+    hasOAuthFallback,
+    errors: [],
+    warnings: [],
+  };
+
+  if (!keyJson) {
+    result.errors.push('GOOGLE_SERVICE_ACCOUNT_KEY is not set');
+    if (hasOAuthFallback) {
+      result.warnings.push('OAuth fallback is available — emails will send as Aaron');
+    }
+    return result;
+  }
+
+  result.hasServiceAccountKey = true;
+
+  // Try parsing JSON
+  let key: ServiceAccountKey;
+  try {
+    key = parseServiceAccountKey(keyJson);
+    result.requiredFieldsPresent = true;
+    result.serviceAccountEmail = key.client_email;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Key parsing failed: ${msg}`);
+    return result;
+  }
+
+  // Try parsing the private key
+  try {
+    await parsePemPrivateKey(key.private_key);
+    result.privateKeyValid = true;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Private key invalid: ${msg}`);
+    return result;
+  }
+
+  result.valid = true;
+
+  if (!result.hasOAuthFallback) {
+    result.warnings.push('No OAuth fallback configured — service account is the only email method');
+  }
+
+  logger.info('Service account key validation passed', {
+    serviceAccountEmail: result.serviceAccountEmail,
+  });
+
+  return result;
 }
 
 // ============================================================================

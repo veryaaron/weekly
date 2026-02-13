@@ -1324,6 +1324,7 @@
                     <button class="tab" onclick="switchTab('team')">Team Members</button>
                     <button class="tab" onclick="switchTab('reports')">Reports</button>
                     <button class="tab" onclick="switchTab('settings')">Settings</button>
+                    <button class="tab" onclick="switchTab('testValidate')">Test & Validate</button>
                 </div>
 
                 <!-- Status Panel -->
@@ -1520,6 +1521,130 @@
                             </form>
                         </div>
                     </div>
+                </div>
+
+                <!-- Test & Validate Panel -->
+                <div class="panel" id="panelTestValidate">
+
+                    <!-- Config Validation -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Configuration Validation</span>
+                            <button class="btn btn-secondary btn-sm" onclick="validateConfig()">Validate Config</button>
+                        </div>
+                        <div class="card-body">
+                            <p style="color: var(--gray-500); font-size: 14px; margin-bottom: 16px;">
+                                Check that the service account key and email auth are correctly configured.
+                            </p>
+                            <div id="configResults" style="display: none;">
+                                <div id="configChecklist"></div>
+                            </div>
+                            <div id="configLoading" style="display: none; text-align: center; padding: 20px;">
+                                <div class="spinner"></div>
+                                <p style="color: var(--gray-500); margin-top: 8px;">Validating configuration...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Token Exchange Test -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Token Exchange Test</span>
+                        </div>
+                        <div class="card-body">
+                            <p style="color: var(--gray-500); font-size: 14px; margin-bottom: 16px;">
+                                Test that domain-wide delegation is working by requesting an access token for a manager email.
+                            </p>
+                            <div class="form-group">
+                                <label class="form-label">Manager Email to Impersonate</label>
+                                <input type="email" class="form-input" id="testTokenEmail" placeholder="aaron@kubapay.com">
+                            </div>
+                            <button class="btn btn-primary" onclick="testTokenExchange()">Test Token Exchange</button>
+                            <div id="tokenResult" style="display: none; margin-top: 16px;"></div>
+                            <div id="tokenLoading" style="display: none; text-align: center; padding: 20px;">
+                                <div class="spinner"></div>
+                                <p style="color: var(--gray-500); margin-top: 8px;">Exchanging token...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Send Test Email -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Send Test Email</span>
+                        </div>
+                        <div class="card-body">
+                            <p style="color: var(--gray-500); font-size: 14px; margin-bottom: 16px;">
+                                Send a real test email to verify the full pipeline end-to-end.
+                            </p>
+                            <div class="form-group">
+                                <label class="form-label">Send As (Manager Email)</label>
+                                <input type="email" class="form-input" id="testSendManager" placeholder="Leave blank for default">
+                                <small style="color: var(--gray-500); font-size: 12px; margin-top: 4px; display: block;">Optional — uses service account to impersonate this email</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Recipient Email *</label>
+                                <input type="email" class="form-input" id="testSendRecipient" placeholder="recipient@kubapay.com">
+                            </div>
+                            <div style="display: flex; gap: 12px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Template</label>
+                                    <select class="form-select" id="testSendTemplate">
+                                        <option value="prompt">Weekly Prompt</option>
+                                        <option value="reminder">Reminder</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-input" id="testSendFirstName" placeholder="Team Member">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px;">
+                                <button class="btn btn-primary" onclick="sendTestEmail()">Send Test Email</button>
+                                <button class="btn btn-secondary" onclick="sendTestToMyself()">Send to Myself</button>
+                            </div>
+                            <div id="sendResult" style="display: none; margin-top: 16px;"></div>
+                            <div id="sendLoading" style="display: none; text-align: center; padding: 20px;">
+                                <div class="spinner"></div>
+                                <p style="color: var(--gray-500); margin-top: 8px;">Sending test email...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Preview -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Template Preview</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: flex; gap: 12px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Template</label>
+                                    <select class="form-select" id="previewTemplate">
+                                        <option value="prompt">Weekly Prompt</option>
+                                        <option value="reminder">Reminder</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-input" id="previewFirstName" placeholder="Team Member">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Manager Name</label>
+                                    <input type="text" class="form-input" id="previewManagerName" placeholder="Aaron">
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="previewTemplate()">Preview</button>
+                            <div id="previewResult" style="display: none; margin-top: 16px;">
+                                <div style="background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 16px;">
+                                    <div style="font-weight: 600; margin-bottom: 8px; color: var(--gray-600);">Subject: <span id="previewSubject"></span></div>
+                                    <hr style="border: none; border-top: 1px solid var(--gray-200); margin: 12px 0;">
+                                    <pre id="previewBody" style="white-space: pre-wrap; font-family: inherit; font-size: 14px; color: var(--gray-700); margin: 0;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </main>
@@ -2842,6 +2967,188 @@
             } catch (err) {
                 console.error('Failed to save settings:', err);
                 showToast(err.message || 'Failed to save settings', 'error');
+            }
+        }
+
+        // ========================================
+        // Test & Validate
+        // ========================================
+
+        async function validateConfig() {
+            const resultsEl = document.getElementById('configResults');
+            const checklistEl = document.getElementById('configChecklist');
+            const loadingEl = document.getElementById('configLoading');
+
+            resultsEl.style.display = 'none';
+            loadingEl.style.display = 'block';
+
+            try {
+                const resp = await apiCall('/admin/email/test-config', { method: 'POST' });
+                const d = resp.data;
+                let html = '';
+
+                const check = (ok, label) => `
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--gray-100);">
+                        <span style="font-size: 18px;">${ok ? '\u2705' : '\u274c'}</span>
+                        <span style="font-size: 14px; color: ${ok ? 'var(--gray-700)' : 'var(--brand-red)'};">${label}</span>
+                    </div>`;
+
+                const warn = (label) => `
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--gray-100);">
+                        <span style="font-size: 18px;">\u26a0\ufe0f</span>
+                        <span style="font-size: 14px; color: var(--gray-600);">${label}</span>
+                    </div>`;
+
+                html += check(d.hasServiceAccountKey, 'Service account key is configured');
+                html += check(d.requiredFieldsPresent, 'Required JSON fields present (private_key, client_email, private_key_id)');
+                if (d.serviceAccountEmail) {
+                    html += check(true, `Service account email: <code>${escapeHtml(d.serviceAccountEmail)}</code>`);
+                }
+                html += check(d.privateKeyValid, 'Private key can be parsed (valid PKCS#8 format)');
+                html += check(d.hasOAuthFallback, 'OAuth fallback available (legacy refresh token)');
+
+                if (d.warnings && d.warnings.length > 0) {
+                    d.warnings.forEach(w => { html += warn(escapeHtml(w)); });
+                }
+                if (d.errors && d.errors.length > 0) {
+                    d.errors.forEach(e => { html += check(false, escapeHtml(e)); });
+                }
+
+                if (d.valid) {
+                    html += `<div style="margin-top: 16px; padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); color: #065f46; font-size: 14px;">
+                        Configuration looks good. Use the Token Exchange test below to verify domain-wide delegation is active.
+                    </div>`;
+                }
+
+                checklistEl.innerHTML = html;
+                resultsEl.style.display = 'block';
+            } catch (err) {
+                checklistEl.innerHTML = `<div style="color: var(--brand-red); padding: 12px;">${escapeHtml(err.message || 'Validation request failed')}</div>`;
+                resultsEl.style.display = 'block';
+            } finally {
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        async function testTokenExchange() {
+            const email = document.getElementById('testTokenEmail').value.trim();
+            if (!email) {
+                showToast('Enter a manager email to impersonate', 'error');
+                return;
+            }
+
+            const resultEl = document.getElementById('tokenResult');
+            const loadingEl = document.getElementById('tokenLoading');
+            resultEl.style.display = 'none';
+            loadingEl.style.display = 'block';
+
+            try {
+                const resp = await apiCall('/admin/email/test-token', {
+                    method: 'POST',
+                    body: JSON.stringify({ managerEmail: email })
+                });
+
+                if (resp.success && resp.data.tokenObtained) {
+                    resultEl.innerHTML = `
+                        <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); color: #065f46; font-size: 14px;">
+                            <strong>Success!</strong> ${escapeHtml(resp.data.message)}<br>
+                            <span style="font-size: 12px; color: #047857;">Token preview: ${escapeHtml(resp.data.tokenPreview)} | ${resp.data.elapsedMs}ms</span>
+                        </div>`;
+                } else {
+                    const err = resp.error || {};
+                    resultEl.innerHTML = `
+                        <div style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #991b1b; font-size: 14px;">
+                            <strong>Failed:</strong> ${escapeHtml(err.message || 'Unknown error')}<br>
+                            ${err.hint ? `<span style="font-size: 12px; color: #b91c1c; margin-top: 8px; display: block;">${escapeHtml(err.hint)}</span>` : ''}
+                        </div>`;
+                }
+                resultEl.style.display = 'block';
+            } catch (err) {
+                resultEl.innerHTML = `<div style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #991b1b;">${escapeHtml(err.message || 'Request failed')}</div>`;
+                resultEl.style.display = 'block';
+            } finally {
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        async function sendTestEmail() {
+            const recipient = document.getElementById('testSendRecipient').value.trim();
+            if (!recipient) {
+                showToast('Enter a recipient email', 'error');
+                return;
+            }
+
+            const managerEmail = document.getElementById('testSendManager').value.trim() || undefined;
+            const templateType = document.getElementById('testSendTemplate').value;
+            const firstName = document.getElementById('testSendFirstName').value.trim() || undefined;
+
+            const resultEl = document.getElementById('sendResult');
+            const loadingEl = document.getElementById('sendLoading');
+            resultEl.style.display = 'none';
+            loadingEl.style.display = 'block';
+
+            try {
+                const resp = await apiCall('/admin/email/test-send', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        managerEmail,
+                        recipientEmail: recipient,
+                        templateType,
+                        firstName
+                    })
+                });
+
+                if (resp.success) {
+                    resultEl.innerHTML = `
+                        <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); color: #065f46; font-size: 14px;">
+                            <strong>Email sent!</strong> ${escapeHtml(resp.data.message)}<br>
+                            <span style="font-size: 12px; color: #047857;">Message ID: ${escapeHtml(resp.data.messageId)} | Auth: ${escapeHtml(resp.data.authMethod)}</span>
+                        </div>`;
+                } else {
+                    const err = resp.error || {};
+                    resultEl.innerHTML = `
+                        <div style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #991b1b; font-size: 14px;">
+                            <strong>Send failed:</strong> ${escapeHtml(err.message || 'Unknown error')}
+                            ${err.authMethod ? `<br><span style="font-size: 12px;">Auth method: ${escapeHtml(err.authMethod)}</span>` : ''}
+                        </div>`;
+                }
+                resultEl.style.display = 'block';
+            } catch (err) {
+                resultEl.innerHTML = `<div style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: #991b1b;">${escapeHtml(err.message || 'Request failed')}</div>`;
+                resultEl.style.display = 'block';
+            } finally {
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        function sendTestToMyself() {
+            if (state.auth && state.auth.email) {
+                document.getElementById('testSendRecipient').value = state.auth.email;
+                document.getElementById('testSendFirstName').value = state.auth.name ? state.auth.name.split(' ')[0] : '';
+                sendTestEmail();
+            } else {
+                showToast('Not signed in', 'error');
+            }
+        }
+
+        async function previewTemplate() {
+            const templateType = document.getElementById('previewTemplate').value;
+            const firstName = document.getElementById('previewFirstName').value.trim() || undefined;
+            const managerName = document.getElementById('previewManagerName').value.trim() || undefined;
+
+            try {
+                const resp = await apiCall('/admin/email/test-preview', {
+                    method: 'POST',
+                    body: JSON.stringify({ templateType, firstName, managerName })
+                });
+
+                if (resp.success) {
+                    document.getElementById('previewSubject').textContent = resp.data.subject;
+                    document.getElementById('previewBody').textContent = resp.data.body;
+                    document.getElementById('previewResult').style.display = 'block';
+                }
+            } catch (err) {
+                showToast(err.message || 'Preview failed', 'error');
             }
         }
 

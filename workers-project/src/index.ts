@@ -53,8 +53,41 @@ import { handleError, errorResponse, NotFoundError } from './middleware/error';
 import { authenticate, requireAdmin } from './middleware/auth';
 import { createLogger, generateRequestId, logRequest, logEmailOperation, logScheduledJob } from './utils/logger';
 import { getAllTeamMembers, getTeamMemberByEmail, getWeeklyStatus, logEmail } from './services/database';
-import { refreshAccessToken, sendEmail } from './services/gmail';
+import { refreshAccessToken, sendEmail, getServiceAccountAccessToken, validateServiceAccountKey } from './services/gmail';
 import { getPromptEmail, getReminderEmail } from './utils/email-templates';
+
+// ============================================================================
+// Dual-Mode Email Auth Helper
+// ============================================================================
+
+/**
+ * Get an email access token using the best available method:
+ * 1. Service account with domain-wide delegation (preferred)
+ * 2. Legacy OAuth2 refresh token (fallback)
+ */
+async function getEmailAccessToken(
+  env: Env,
+  managerEmail: string | undefined,
+  logger: Logger
+): Promise<string> {
+  // Try service account first
+  if (env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    const impersonateEmail = managerEmail || env.SUPER_ADMIN_EMAILS?.split(',')[0]?.trim();
+    if (!impersonateEmail) {
+      throw new Error('Service account requires a manager email to impersonate, but none was provided and SUPER_ADMIN_EMAILS is not set');
+    }
+    logger.info('Using service account for email auth', { managerEmail: impersonateEmail });
+    return getServiceAccountAccessToken(env.GOOGLE_SERVICE_ACCOUNT_KEY, impersonateEmail, logger);
+  }
+
+  // Fall back to OAuth
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
+    throw new Error('No email auth configured. Set GOOGLE_SERVICE_ACCOUNT_KEY (preferred) or OAuth secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN).');
+  }
+
+  logger.info('Using legacy OAuth for email auth');
+  return refreshAccessToken(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger);
+}
 
 // Re-export Env type for wrangler
 export type { Env };
@@ -429,26 +462,17 @@ async function handleApiRequest(
 
 /**
  * Send weekly prompt emails to all active team members.
- * Used for manual testing / resending from the admin dashboard.
+ * Uses service account if available, falls back to OAuth.
  */
 async function handleSendPromptEmails(env: Env, logger: Logger): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
-    return new Response(
-      JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'Gmail API secrets not configured' } }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   let accessToken: string;
   try {
-    accessToken = await refreshAccessToken(
-      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
-    );
+    accessToken = await getEmailAccessToken(env, undefined, logger);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error('Token refresh failed in prompt handler', error instanceof Error ? error : undefined);
+    logger.error('Email auth failed in prompt handler', error instanceof Error ? error : undefined);
     return new Response(
-      JSON.stringify({ success: false, error: { code: 'TOKEN_ERROR', message: `Gmail token refresh failed: ${message}` } }),
+      JSON.stringify({ success: false, error: { code: 'AUTH_ERROR', message } }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -488,26 +512,17 @@ async function handleSendPromptEmails(env: Env, logger: Logger): Promise<Respons
 
 /**
  * Send reminder emails to team members who haven't submitted this week.
- * Used for manual testing / resending from the admin dashboard.
+ * Uses service account if available, falls back to OAuth.
  */
 async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
-    return new Response(
-      JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'Gmail API secrets not configured' } }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   let accessToken: string;
   try {
-    accessToken = await refreshAccessToken(
-      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
-    );
+    accessToken = await getEmailAccessToken(env, undefined, logger);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error('Token refresh failed in reminder handler', error instanceof Error ? error : undefined);
+    logger.error('Email auth failed in reminder handler', error instanceof Error ? error : undefined);
     return new Response(
-      JSON.stringify({ success: false, error: { code: 'TOKEN_ERROR', message: `Gmail token refresh failed: ${message}` } }),
+      JSON.stringify({ success: false, error: { code: 'AUTH_ERROR', message } }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -559,24 +574,6 @@ async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Respo
  * Body: { email: string, type: 'prompt' | 'reminder' }
  */
 async function handleSendSingleEmail(request: Request, env: Env, logger: Logger): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: {
-          code: 'CONFIG_ERROR',
-          message: 'Gmail API secrets not configured',
-          detail: {
-            hasClientId: !!env.GOOGLE_CLIENT_ID,
-            hasClientSecret: !!env.GOOGLE_CLIENT_SECRET,
-            hasRefreshToken: !!env.GOOGLE_REFRESH_TOKEN,
-          },
-        },
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   let body: { email?: string; type?: string };
   try {
     body = (await request.json()) as { email?: string; type?: string };
@@ -602,17 +599,14 @@ async function handleSendSingleEmail(request: Request, env: Env, logger: Logger)
   const memberName = member?.name || email.split('@')[0];
   const firstName = member?.first_name || memberName.split(' ')[0];
 
-  // Refresh access token — surface the actual error if this fails
   let accessToken: string;
   try {
-    accessToken = await refreshAccessToken(
-      env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_REFRESH_TOKEN, logger
-    );
+    accessToken = await getEmailAccessToken(env, undefined, logger);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error('Token refresh failed in send handler', error instanceof Error ? error : undefined);
+    logger.error('Email auth failed in send handler', error instanceof Error ? error : undefined);
     return new Response(
-      JSON.stringify({ success: false, error: { code: 'TOKEN_ERROR', message: `Gmail token refresh failed: ${message}` } }),
+      JSON.stringify({ success: false, error: { code: 'AUTH_ERROR', message } }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -646,6 +640,217 @@ async function handleSendSingleEmail(request: Request, env: Env, logger: Logger)
 
   return new Response(
     JSON.stringify({ success: true, data: { email, type: emailType, messageId: result.messageId } }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+// ============================================================================
+// Email Test & Validation Handlers
+// ============================================================================
+
+/**
+ * Validate the service account key configuration.
+ * POST /api/admin/email/test-config
+ */
+async function handleTestEmailConfig(env: Env, logger: Logger): Promise<Response> {
+  const hasOAuthFallback = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN);
+  const result = await validateServiceAccountKey(env.GOOGLE_SERVICE_ACCOUNT_KEY, hasOAuthFallback, logger);
+
+  return new Response(
+    JSON.stringify({ success: true, data: result }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+/**
+ * Test token exchange with Google (proves domain-wide delegation works).
+ * POST /api/admin/email/test-token { managerEmail: string }
+ */
+async function handleTestEmailToken(request: Request, env: Env, logger: Logger): Promise<Response> {
+  let body: { managerEmail?: string };
+  try {
+    body = (await request.json()) as { managerEmail?: string };
+  } catch {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Invalid JSON body' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const managerEmail = body.managerEmail;
+  if (!managerEmail) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Required: managerEmail' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'GOOGLE_SERVICE_ACCOUNT_KEY is not configured' } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  try {
+    const startTime = Date.now();
+    const accessToken = await getServiceAccountAccessToken(env.GOOGLE_SERVICE_ACCOUNT_KEY, managerEmail, logger);
+    const elapsed = Date.now() - startTime;
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: {
+          tokenObtained: true,
+          managerEmail,
+          tokenPreview: `${accessToken.substring(0, 20)}...`,
+          elapsedMs: elapsed,
+          message: `Successfully obtained access token for ${managerEmail}. Domain-wide delegation is working.`,
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: 'TOKEN_EXCHANGE_FAILED',
+          message,
+          hint: message.includes('unauthorized_client')
+            ? 'Domain-wide delegation may not be enabled yet. Check with IT that the service account client ID has been authorized in Google Workspace Admin Console.'
+            : message.includes('invalid_grant')
+            ? 'The manager email may not exist in your Google Workspace, or the service account key may be invalid.'
+            : 'Check the error message for details. Common causes: delegation not enabled, wrong scope, invalid key.',
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/**
+ * Send a test email via service account or OAuth fallback.
+ * POST /api/admin/email/test-send { managerEmail?, recipientEmail, templateType, firstName? }
+ */
+async function handleTestEmailSend(request: Request, env: Env, logger: Logger): Promise<Response> {
+  let body: { managerEmail?: string; recipientEmail?: string; templateType?: string; firstName?: string };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Invalid JSON body' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!body.recipientEmail || !body.templateType || (body.templateType !== 'prompt' && body.templateType !== 'reminder')) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Required: recipientEmail, templateType ("prompt" or "reminder")' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const firstName = body.firstName || body.recipientEmail.split('@')[0];
+  const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
+  const template = body.templateType === 'prompt'
+    ? getPromptEmail(firstName, formUrl)
+    : getReminderEmail(firstName, formUrl);
+
+  let accessToken: string;
+  let authMethod: string;
+  try {
+    if (body.managerEmail && env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+      accessToken = await getServiceAccountAccessToken(env.GOOGLE_SERVICE_ACCOUNT_KEY, body.managerEmail, logger);
+      authMethod = `service-account (as ${body.managerEmail})`;
+    } else {
+      accessToken = await getEmailAccessToken(env, body.managerEmail, logger);
+      authMethod = env.GOOGLE_SERVICE_ACCOUNT_KEY ? 'service-account' : 'oauth-fallback';
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'AUTH_ERROR', message } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const result = await sendEmail(accessToken, body.recipientEmail, template.subject, template.body, logger);
+
+  // Log test email to DB
+  await logEmail(env.DB, {
+    recipientEmail: body.recipientEmail,
+    recipientName: firstName,
+    emailType: body.templateType as 'prompt' | 'reminder',
+    subject: `[TEST] ${template.subject}`,
+    bodyPreview: template.body.substring(0, 100),
+    status: result.success ? 'sent' : 'failed',
+    resendId: result.messageId,
+    errorMessage: result.error,
+  });
+
+  if (!result.success) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'SEND_FAILED', message: result.error, authMethod } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        messageId: result.messageId,
+        recipient: body.recipientEmail,
+        templateType: body.templateType,
+        authMethod,
+        message: `Test email sent successfully to ${body.recipientEmail}`,
+      },
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+/**
+ * Preview an email template without sending.
+ * POST /api/admin/email/test-preview { templateType, firstName?, managerName? }
+ */
+async function handleTestEmailPreview(request: Request, env: Env, logger: Logger): Promise<Response> {
+  let body: { templateType?: string; firstName?: string; managerName?: string };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Invalid JSON body' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!body.templateType || (body.templateType !== 'prompt' && body.templateType !== 'reminder')) {
+    return new Response(
+      JSON.stringify({ success: false, error: { code: 'BAD_REQUEST', message: 'Required: templateType ("prompt" or "reminder")' } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const firstName = body.firstName || 'Team Member';
+  const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
+  const template = body.templateType === 'prompt'
+    ? getPromptEmail(firstName, formUrl, body.managerName)
+    : getReminderEmail(firstName, formUrl, body.managerName);
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        subject: template.subject,
+        body: template.body,
+        templateType: body.templateType,
+        firstName,
+        managerName: body.managerName || 'Aaron',
+      },
+    }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   );
 }
@@ -729,23 +934,20 @@ export default {
     });
 
     try {
-      // Validate Gmail secrets are configured
-      if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN) {
-        logger.error('Gmail secrets not configured — skipping email send', undefined, {
-          hasClientId: !!env.GOOGLE_CLIENT_ID,
-          hasClientSecret: !!env.GOOGLE_CLIENT_SECRET,
-          hasRefreshToken: !!env.GOOGLE_REFRESH_TOKEN,
+      // Validate that at least one email auth method is configured
+      const hasServiceAccount = !!env.GOOGLE_SERVICE_ACCOUNT_KEY;
+      const hasOAuth = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN);
+
+      if (!hasServiceAccount && !hasOAuth) {
+        logger.error('No email auth configured — skipping email send', undefined, {
+          hasServiceAccount,
+          hasOAuth,
         });
-        throw new Error('Gmail API secrets not configured. Set GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN.');
+        throw new Error('No email auth configured. Set GOOGLE_SERVICE_ACCOUNT_KEY or OAuth secrets.');
       }
 
-      // Refresh access token once for the entire batch
-      const accessToken = await refreshAccessToken(
-        env.GOOGLE_CLIENT_ID,
-        env.GOOGLE_CLIENT_SECRET,
-        env.GOOGLE_REFRESH_TOKEN,
-        logger
-      );
+      // Get access token using best available method
+      const accessToken = await getEmailAccessToken(env, undefined, logger);
 
       const formUrl = env.FORM_URL || 'https://tools.kubagroup.com/weekly';
 

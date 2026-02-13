@@ -25,6 +25,7 @@ export interface Env {
   ANTHROPIC_API_KEY?: string; // For AI-powered report analysis
   GOOGLE_CLIENT_SECRET?: string; // Worker secret: OAuth2 client secret for Gmail API
   GOOGLE_REFRESH_TOKEN?: string; // Worker secret: OAuth2 refresh token for Gmail API
+  GOOGLE_SERVICE_ACCOUNT_KEY?: string; // Worker secret: Service Account JSON key for domain-wide delegation
 }
 
 // ============================================================================

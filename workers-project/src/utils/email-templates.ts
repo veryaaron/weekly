@@ -21,7 +21,7 @@ export interface EmailTemplate {
 /**
  * Wednesday morning prompt — sent to all active team members.
  */
-export function getPromptEmail(firstName: string, formUrl: string): EmailTemplate {
+export function getPromptEmail(firstName: string, formUrl: string, managerName?: string): EmailTemplate {
   return {
     subject: 'Weekly Feedback Time',
     body: `Hi ${firstName},
@@ -33,14 +33,14 @@ Submit here: ${formUrl}
 Please submit by Thursday to be included in the weekly report.
 
 Thanks,
-Aaron`,
+${managerName || 'Aaron'}`,
   };
 }
 
 /**
  * Thursday follow-up reminder — sent only to members who haven't submitted.
  */
-export function getReminderEmail(firstName: string, formUrl: string): EmailTemplate {
+export function getReminderEmail(firstName: string, formUrl: string, managerName?: string): EmailTemplate {
   return {
     subject: 'Reminder: Weekly Feedback Due Today',
     body: `Hi ${firstName},
@@ -52,6 +52,6 @@ Submit here: ${formUrl}
 Takes only 5 minutes. Your input helps keep the team connected.
 
 Thanks,
-Aaron`,
+${managerName || 'Aaron'}`,
   };
 }

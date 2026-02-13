@@ -63,7 +63,7 @@ binding = "AI"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "weekly-feedback-staging"
-database_id = "d05cf560-e7b7-4ed9-804e-9eaa8fa3edba"
+database_id = "fa77705e-6be9-4ab3-9980-b5205d8d7c1b"
 migrations_dir = "migrations"
 
 # Production environment (tools.kubagroup.com)
