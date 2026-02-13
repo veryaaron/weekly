@@ -199,10 +199,11 @@ async function buildSignedJwt(
 }
 
 /**
- * Parse and validate a service account JSON key string.
+ * Parse and validate a service account key (accepts JSON string or pre-parsed object).
+ * Cloudflare automatically parses JSON-type env vars into objects.
  */
-function parseServiceAccountKey(keyJson: string): ServiceAccountKey {
-  const key = JSON.parse(keyJson) as ServiceAccountKey;
+function parseServiceAccountKey(keyJson: string | object): ServiceAccountKey {
+  const key = (typeof keyJson === 'object' ? keyJson : JSON.parse(keyJson)) as ServiceAccountKey;
 
   const required = ['private_key', 'client_email', 'private_key_id'] as const;
   const missing = required.filter((field) => !key[field]);
@@ -218,7 +219,7 @@ function parseServiceAccountKey(keyJson: string): ServiceAccountKey {
  * The `managerEmail` is the user to impersonate (emails will be sent as this user).
  */
 export async function getServiceAccountAccessToken(
-  keyJson: string,
+  keyJson: string | object,
   managerEmail: string,
   logger: Logger
 ): Promise<string> {
@@ -292,7 +293,7 @@ export async function sendAsManager(
  * Used by the test page to check configuration.
  */
 export async function validateServiceAccountKey(
-  keyJson: string | undefined,
+  keyJson: string | object | undefined,
   hasOAuthFallback: boolean,
   logger: Logger
 ): Promise<ConfigValidationResult> {

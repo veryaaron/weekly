@@ -32,8 +32,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: SecretStoreSecret;
   GOOGLE_REFRESH_TOKEN?: SecretStoreSecret;
 
-  // Stored directly on worker as JSON type (too large for Secrets Store UI)
-  GOOGLE_SERVICE_ACCOUNT_KEY?: string;
+  // Stored directly on worker as JSON type (Cloudflare auto-parses to object)
+  GOOGLE_SERVICE_ACCOUNT_KEY?: string | object;
 }
 
 
