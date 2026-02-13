@@ -72,15 +72,14 @@ async function getEmailAccessToken(
   managerEmail: string | undefined,
   logger: Logger
 ): Promise<string> {
-  // Try service account first
-  const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
-  if (serviceAccountKey) {
+  // Try service account first (stored as JSON directly on worker)
+  if (env.GOOGLE_SERVICE_ACCOUNT_KEY) {
     const impersonateEmail = managerEmail || env.SUPER_ADMIN_EMAILS?.split(',')[0]?.trim();
     if (!impersonateEmail) {
       throw new Error('Service account requires a manager email to impersonate, but none was provided and SUPER_ADMIN_EMAILS is not set');
     }
     logger.info('Using service account for email auth', { managerEmail: impersonateEmail });
-    return getServiceAccountAccessToken(serviceAccountKey, impersonateEmail, logger);
+    return getServiceAccountAccessToken(env.GOOGLE_SERVICE_ACCOUNT_KEY, impersonateEmail, logger);
   }
 
   // Fall back to OAuth
@@ -694,7 +693,7 @@ async function handleTestEmailConfig(env: Env, logger: Logger): Promise<Response
   // Resolve secrets inline
   const clientSecret = await env.GOOGLE_CLIENT_SECRET?.get().catch(() => undefined);
   const refreshToken = await env.GOOGLE_REFRESH_TOKEN?.get().catch(() => undefined);
-  const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
+  const serviceAccountKey = env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
   const hasOAuthFallback = !!(env.GOOGLE_CLIENT_ID && clientSecret && refreshToken);
   const result = await validateServiceAccountKey(serviceAccountKey, hasOAuthFallback, logger);
@@ -728,7 +727,7 @@ async function handleTestEmailToken(request: Request, env: Env, logger: Logger):
     );
   }
 
-  const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
+  const serviceAccountKey = env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (!serviceAccountKey) {
     return new Response(
       JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'GOOGLE_SERVICE_ACCOUNT_KEY is not configured' } }),
@@ -805,7 +804,7 @@ async function handleTestEmailSend(request: Request, env: Env, logger: Logger): 
   let accessToken: string;
   let authMethod: string;
   try {
-    const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
+    const serviceAccountKey = env.GOOGLE_SERVICE_ACCOUNT_KEY;
     if (body.managerEmail && serviceAccountKey) {
       accessToken = await getServiceAccountAccessToken(serviceAccountKey, body.managerEmail, logger);
       authMethod = `service-account (as ${body.managerEmail})`;
@@ -980,7 +979,7 @@ export default {
 
     try {
       // Validate that at least one email auth method is configured
-      const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
+      const serviceAccountKey = env.GOOGLE_SERVICE_ACCOUNT_KEY;
       const clientSecret = await env.GOOGLE_CLIENT_SECRET?.get().catch(() => undefined);
       const refreshToken = await env.GOOGLE_REFRESH_TOKEN?.get().catch(() => undefined);
 

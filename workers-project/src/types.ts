@@ -31,7 +31,9 @@ export interface Env {
   ANTHROPIC_API_KEY?: SecretStoreSecret;
   GOOGLE_CLIENT_SECRET?: SecretStoreSecret;
   GOOGLE_REFRESH_TOKEN?: SecretStoreSecret;
-  GOOGLE_SERVICE_ACCOUNT_KEY?: SecretStoreSecret;
+
+  // Stored directly on worker as JSON type (too large for Secrets Store UI)
+  GOOGLE_SERVICE_ACCOUNT_KEY?: string;
 }
 
 
