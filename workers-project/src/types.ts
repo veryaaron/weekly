@@ -8,6 +8,11 @@
 // Environment Types
 // ============================================================================
 
+// Secrets Store binding type — call .get() to retrieve the secret value
+interface SecretStoreSecret {
+  get(): Promise<string>;
+}
+
 export interface Env {
   // Cloudflare bindings
   ASSETS: Fetcher;
@@ -20,13 +25,16 @@ export interface Env {
   ADMIN_EMAILS?: string; // Deprecated: use SUPER_ADMIN_EMAILS
   SUPER_ADMIN_EMAILS?: string; // Comma-separated list of super admin emails
   GOOGLE_CLIENT_ID?: string;
-  RESEND_API_KEY?: string;
   ALLOWED_DOMAINS?: string; // Comma-separated list of allowed email domains
-  ANTHROPIC_API_KEY?: string; // For AI-powered report analysis
-  GOOGLE_CLIENT_SECRET?: string; // Worker secret: OAuth2 client secret for Gmail API
-  GOOGLE_REFRESH_TOKEN?: string; // Worker secret: OAuth2 refresh token for Gmail API
-  GOOGLE_SERVICE_ACCOUNT_KEY?: string; // Worker secret: Service Account JSON key for domain-wide delegation
+
+  // Secrets Store bindings (call .get() to resolve)
+  ANTHROPIC_API_KEY?: SecretStoreSecret;
+  GOOGLE_CLIENT_SECRET?: SecretStoreSecret;
+  GOOGLE_REFRESH_TOKEN?: SecretStoreSecret;
+  GOOGLE_SERVICE_ACCOUNT_KEY?: SecretStoreSecret;
 }
+
+
 
 // ============================================================================
 // Database Models

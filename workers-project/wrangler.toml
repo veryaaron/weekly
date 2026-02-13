@@ -19,7 +19,15 @@ ADMIN_EMAILS = "aaron@kubapay.com"
 SUPER_ADMIN_EMAILS = "aaron@kubapay.com"
 ALLOWED_DOMAINS = "kubapay.com,vixtechnology.com,voqa.com"
 GOOGLE_CLIENT_ID = "287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com"
-# ANTHROPIC_API_KEY should be set as a secret: wrangler secret put ANTHROPIC_API_KEY
+
+# Secrets Store bindings (shared across all environments)
+# Store ID: 794f14e962284f1f956fb2a4b4d14c00
+secrets_store_secrets = [
+  { binding = "GOOGLE_CLIENT_SECRET", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_CLIENT_SECRET_KUBAREPORTS" },
+  { binding = "GOOGLE_REFRESH_TOKEN", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_REFRESH_TOKEN_KUBAREPORTS" },
+  { binding = "GOOGLE_SERVICE_ACCOUNT_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_SERVICE_ACCOUNT_KEY_KUBAREPORTS" },
+  { binding = "ANTHROPIC_API_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "ANTHROPIC_API_KEY_KUBAREPORTS" },
+]
 
 # Static assets - Worker handles routing first, then falls back to assets
 [assets]

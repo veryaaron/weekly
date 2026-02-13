@@ -735,17 +735,18 @@ export async function handleGenerateWorkspaceReport(
   const workspaceName = auth.currentWorkspace?.manager_name || 'Team';
 
   // Use AI analysis if API key is available
+  const anthropicApiKey = await env.ANTHROPIC_API_KEY?.get().catch(() => undefined);
   let analysis = null;
   let content: string;
 
-  if (env.ANTHROPIC_API_KEY) {
+  if (anthropicApiKey) {
     logger.info('Generating AI-powered report');
 
     // Cast submissions to SubmissionWithMember type
     const submissionsWithMembers = submissions as SubmissionWithMember[];
 
     analysis = await analyzeSubmissions(
-      env.ANTHROPIC_API_KEY,
+      anthropicApiKey,
       submissionsWithMembers,
       weekNumber,
       year,

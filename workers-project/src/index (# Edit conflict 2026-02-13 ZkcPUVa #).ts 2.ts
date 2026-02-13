@@ -11,7 +11,8 @@
  * Static assets are served via the ASSETS binding
  */
 
-import type { Env, ScheduledEvent, Logger } from './types';
+import type { Env, ScheduledEvent, Logger, ResolvedSecrets } from './types';
+import { resolveSecrets } from './types';
 import { getLandingPage } from './pages/landing';
 import { handleHealthCheck, handlePing, handleHealthStats } from './routes/health';
 import { handleAuthVerify } from './routes/auth';
@@ -65,33 +66,32 @@ import { getPromptEmail, getReminderEmail } from './utils/email-templates';
  * 1. Service account with domain-wide delegation (preferred)
  * 2. Legacy OAuth2 refresh token (fallback)
  *
- * Resolves Secrets Store bindings inline via .get() calls.
+ * Accepts resolved secret strings (from resolveSecrets), NOT raw env bindings.
  */
 async function getEmailAccessToken(
-  env: Env,
+  secrets: ResolvedSecrets,
+  googleClientId: string | undefined,
+  superAdminEmails: string | undefined,
   managerEmail: string | undefined,
   logger: Logger
 ): Promise<string> {
   // Try service account first
-  const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
-  if (serviceAccountKey) {
-    const impersonateEmail = managerEmail || env.SUPER_ADMIN_EMAILS?.split(',')[0]?.trim();
+  if (secrets.googleServiceAccountKey) {
+    const impersonateEmail = managerEmail || superAdminEmails?.split(',')[0]?.trim();
     if (!impersonateEmail) {
       throw new Error('Service account requires a manager email to impersonate, but none was provided and SUPER_ADMIN_EMAILS is not set');
     }
     logger.info('Using service account for email auth', { managerEmail: impersonateEmail });
-    return getServiceAccountAccessToken(serviceAccountKey, impersonateEmail, logger);
+    return getServiceAccountAccessToken(secrets.googleServiceAccountKey, impersonateEmail, logger);
   }
 
   // Fall back to OAuth
-  const clientSecret = await env.GOOGLE_CLIENT_SECRET?.get().catch(() => undefined);
-  const refreshToken = await env.GOOGLE_REFRESH_TOKEN?.get().catch(() => undefined);
-  if (!env.GOOGLE_CLIENT_ID || !clientSecret || !refreshToken) {
+  if (!googleClientId || !secrets.googleClientSecret || !secrets.googleRefreshToken) {
     throw new Error('No email auth configured. Set GOOGLE_SERVICE_ACCOUNT_KEY (preferred) or OAuth secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN).');
   }
 
   logger.info('Using legacy OAuth for email auth');
-  return refreshAccessToken(env.GOOGLE_CLIENT_ID, clientSecret, refreshToken, logger);
+  return refreshAccessToken(googleClientId, secrets.googleClientSecret, secrets.googleRefreshToken, logger);
 }
 
 // Re-export Env type for wrangler
@@ -145,6 +145,9 @@ async function handleApiRequest(
   });
 
   const startTime = Date.now();
+
+  // Resolve all Secrets Store bindings once per request
+  const secrets = await resolveSecrets(env);
 
   try {
     // Health endpoints (no auth required)
@@ -259,7 +262,7 @@ async function handleApiRequest(
     if (path === '/api/admin/email/prompt' && request.method === 'POST') {
       const auth = await authenticate(request, env, logger);
       requireAdmin(auth);
-      const response = await handleSendPromptEmails(env, logger);
+      const response = await handleSendPromptEmails(env, secrets, logger);
       logRequest(logger, request, response, startTime);
       return response;
     }
@@ -267,7 +270,7 @@ async function handleApiRequest(
     if (path === '/api/admin/email/reminder' && request.method === 'POST') {
       const auth = await authenticate(request, env, logger);
       requireAdmin(auth);
-      const response = await handleSendReminderEmails(env, logger);
+      const response = await handleSendReminderEmails(env, secrets, logger);
       logRequest(logger, request, response, startTime);
       return response;
     }
@@ -276,7 +279,7 @@ async function handleApiRequest(
     if (path === '/api/admin/email/send' && request.method === 'POST') {
       const auth = await authenticate(request, env, logger);
       requireAdmin(auth);
-      const response = await handleSendSingleEmail(request, env, logger);
+      const response = await handleSendSingleEmail(request, env, secrets, logger);
       logRequest(logger, request, response, startTime);
       return response;
     }
@@ -285,7 +288,7 @@ async function handleApiRequest(
     if (path === '/api/admin/email/test-config' && request.method === 'POST') {
       const auth = await authenticate(request, env, logger);
       requireAdmin(auth);
-      const response = await handleTestEmailConfig(env, logger);
+      const response = await handleTestEmailConfig(env, secrets, logger);
       logRequest(logger, request, response, startTime);
       return response;
     }
@@ -293,7 +296,7 @@ async function handleApiRequest(
     if (path === '/api/admin/email/test-token' && request.method === 'POST') {
       const auth = await authenticate(request, env, logger);
       requireAdmin(auth);
-      const response = await handleTestEmailToken(request, env, logger);
+      const response = await handleTestEmailToken(request, env, secrets, logger);
       logRequest(logger, request, response, startTime);
       return response;
     }
@@ -301,7 +304,7 @@ async function handleApiRequest(
     if (path === '/api/admin/email/test-send' && request.method === 'POST') {
       const auth = await authenticate(request, env, logger);
       requireAdmin(auth);
-      const response = await handleTestEmailSend(request, env, logger);
+      const response = await handleTestEmailSend(request, env, secrets, logger);
       logRequest(logger, request, response, startTime);
       return response;
     }
@@ -460,7 +463,7 @@ async function handleApiRequest(
     const generateReportMatch = path.match(/^\/api\/workspaces\/([^/]+)\/report$/);
     if (generateReportMatch && request.method === 'POST') {
       const workspaceId = generateReportMatch[1];
-      const response = await handleGenerateWorkspaceReport(request, env, logger, workspaceId);
+      const response = await handleGenerateWorkspaceReport(request, env, secrets, logger, workspaceId);
       logRequest(logger, request, response, startTime);
       return response;
     }
@@ -502,10 +505,10 @@ async function handleApiRequest(
  * Send weekly prompt emails to all active team members.
  * Uses service account if available, falls back to OAuth.
  */
-async function handleSendPromptEmails(env: Env, logger: Logger): Promise<Response> {
+async function handleSendPromptEmails(env: Env, secrets: ResolvedSecrets, logger: Logger): Promise<Response> {
   let accessToken: string;
   try {
-    accessToken = await getEmailAccessToken(env, undefined, logger);
+    accessToken = await getEmailAccessToken(secrets, env.GOOGLE_CLIENT_ID, env.SUPER_ADMIN_EMAILS, undefined, logger);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('Email auth failed in prompt handler', error instanceof Error ? error : undefined);
@@ -552,10 +555,10 @@ async function handleSendPromptEmails(env: Env, logger: Logger): Promise<Respons
  * Send reminder emails to team members who haven't submitted this week.
  * Uses service account if available, falls back to OAuth.
  */
-async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Response> {
+async function handleSendReminderEmails(env: Env, secrets: ResolvedSecrets, logger: Logger): Promise<Response> {
   let accessToken: string;
   try {
-    accessToken = await getEmailAccessToken(env, undefined, logger);
+    accessToken = await getEmailAccessToken(secrets, env.GOOGLE_CLIENT_ID, env.SUPER_ADMIN_EMAILS, undefined, logger);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('Email auth failed in reminder handler', error instanceof Error ? error : undefined);
@@ -611,7 +614,7 @@ async function handleSendReminderEmails(env: Env, logger: Logger): Promise<Respo
  * Send a single email (prompt or reminder) to one team member.
  * Body: { email: string, type: 'prompt' | 'reminder' }
  */
-async function handleSendSingleEmail(request: Request, env: Env, logger: Logger): Promise<Response> {
+async function handleSendSingleEmail(request: Request, env: Env, secrets: ResolvedSecrets, logger: Logger): Promise<Response> {
   let body: { email?: string; type?: string };
   try {
     body = (await request.json()) as { email?: string; type?: string };
@@ -639,7 +642,7 @@ async function handleSendSingleEmail(request: Request, env: Env, logger: Logger)
 
   let accessToken: string;
   try {
-    accessToken = await getEmailAccessToken(env, undefined, logger);
+    accessToken = await getEmailAccessToken(secrets, env.GOOGLE_CLIENT_ID, env.SUPER_ADMIN_EMAILS, undefined, logger);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('Email auth failed in send handler', error instanceof Error ? error : undefined);
@@ -690,14 +693,9 @@ async function handleSendSingleEmail(request: Request, env: Env, logger: Logger)
  * Validate the service account key configuration.
  * POST /api/admin/email/test-config
  */
-async function handleTestEmailConfig(env: Env, logger: Logger): Promise<Response> {
-  // Resolve secrets inline
-  const clientSecret = await env.GOOGLE_CLIENT_SECRET?.get().catch(() => undefined);
-  const refreshToken = await env.GOOGLE_REFRESH_TOKEN?.get().catch(() => undefined);
-  const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
-
-  const hasOAuthFallback = !!(env.GOOGLE_CLIENT_ID && clientSecret && refreshToken);
-  const result = await validateServiceAccountKey(serviceAccountKey, hasOAuthFallback, logger);
+async function handleTestEmailConfig(env: Env, secrets: ResolvedSecrets, logger: Logger): Promise<Response> {
+  const hasOAuthFallback = !!(env.GOOGLE_CLIENT_ID && secrets.googleClientSecret && secrets.googleRefreshToken);
+  const result = await validateServiceAccountKey(secrets.googleServiceAccountKey, hasOAuthFallback, logger);
 
   return new Response(
     JSON.stringify({ success: true, data: result }),
@@ -709,7 +707,7 @@ async function handleTestEmailConfig(env: Env, logger: Logger): Promise<Response
  * Test token exchange with Google (proves domain-wide delegation works).
  * POST /api/admin/email/test-token { managerEmail: string }
  */
-async function handleTestEmailToken(request: Request, env: Env, logger: Logger): Promise<Response> {
+async function handleTestEmailToken(request: Request, env: Env, secrets: ResolvedSecrets, logger: Logger): Promise<Response> {
   let body: { managerEmail?: string };
   try {
     body = (await request.json()) as { managerEmail?: string };
@@ -728,8 +726,7 @@ async function handleTestEmailToken(request: Request, env: Env, logger: Logger):
     );
   }
 
-  const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
-  if (!serviceAccountKey) {
+  if (!secrets.googleServiceAccountKey) {
     return new Response(
       JSON.stringify({ success: false, error: { code: 'CONFIG_ERROR', message: 'GOOGLE_SERVICE_ACCOUNT_KEY is not configured' } }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -738,7 +735,7 @@ async function handleTestEmailToken(request: Request, env: Env, logger: Logger):
 
   try {
     const startTime = Date.now();
-    const accessToken = await getServiceAccountAccessToken(serviceAccountKey, managerEmail, logger);
+    const accessToken = await getServiceAccountAccessToken(secrets.googleServiceAccountKey, managerEmail, logger);
     const elapsed = Date.now() - startTime;
 
     return new Response(
@@ -805,13 +802,12 @@ async function handleTestEmailSend(request: Request, env: Env, logger: Logger): 
   let accessToken: string;
   let authMethod: string;
   try {
-    const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
-    if (body.managerEmail && serviceAccountKey) {
-      accessToken = await getServiceAccountAccessToken(serviceAccountKey, body.managerEmail, logger);
+    if (body.managerEmail && env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+      accessToken = await getServiceAccountAccessToken(env.GOOGLE_SERVICE_ACCOUNT_KEY, body.managerEmail, logger);
       authMethod = `service-account (as ${body.managerEmail})`;
     } else {
       accessToken = await getEmailAccessToken(env, body.managerEmail, logger);
-      authMethod = serviceAccountKey ? 'service-account' : 'oauth-fallback';
+      authMethod = env.GOOGLE_SERVICE_ACCOUNT_KEY ? 'service-account' : 'oauth-fallback';
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -980,12 +976,8 @@ export default {
 
     try {
       // Validate that at least one email auth method is configured
-      const serviceAccountKey = await env.GOOGLE_SERVICE_ACCOUNT_KEY?.get().catch(() => undefined);
-      const clientSecret = await env.GOOGLE_CLIENT_SECRET?.get().catch(() => undefined);
-      const refreshToken = await env.GOOGLE_REFRESH_TOKEN?.get().catch(() => undefined);
-
-      const hasServiceAccount = !!serviceAccountKey;
-      const hasOAuth = !!(env.GOOGLE_CLIENT_ID && clientSecret && refreshToken);
+      const hasServiceAccount = !!env.GOOGLE_SERVICE_ACCOUNT_KEY;
+      const hasOAuth = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN);
 
       if (!hasServiceAccount && !hasOAuth) {
         logger.error('No email auth configured — skipping email send', undefined, {
