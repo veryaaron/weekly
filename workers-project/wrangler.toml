@@ -20,15 +20,6 @@ SUPER_ADMIN_EMAILS = "aaron@kubapay.com"
 ALLOWED_DOMAINS = "kubapay.com,vixtechnology.com,voqa.com"
 GOOGLE_CLIENT_ID = "287284865613-fq9mql1qvr9sqogv6tjgde29o2bhidri.apps.googleusercontent.com"
 
-# Secrets Store bindings (shared across all environments)
-# Store ID: 794f14e962284f1f956fb2a4b4d14c00
-secrets_store_secrets = [
-  { binding = "GOOGLE_CLIENT_SECRET", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_CLIENT_SECRET_KUBAREPORTS" },
-  { binding = "GOOGLE_REFRESH_TOKEN", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_REFRESH_TOKEN_KUBAREPORTS" },
-  { binding = "GOOGLE_SERVICE_ACCOUNT_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_SERVICE_ACCOUNT_KEY_KUBAREPORTS" },
-  { binding = "ANTHROPIC_API_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "ANTHROPIC_API_KEY_KUBAREPORTS" },
-]
-
 # Static assets - Worker handles routing first, then falls back to assets
 [assets]
 directory = "./public"
@@ -54,9 +45,19 @@ binding = "AI"
 [triggers]
 crons = ["0 9 * * 3", "0 17 * * 4"]
 
+# =============================================================================
 # Staging environment
+# =============================================================================
 [env.staging]
 name = "weekly-staging"
+# Secrets Store bindings (store ID: 794f14e962284f1f956fb2a4b4d14c00)
+secrets_store_secrets = [
+  { binding = "GOOGLE_CLIENT_SECRET", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_CLIENT_SECRET_KUBAREPORTS" },
+  { binding = "GOOGLE_REFRESH_TOKEN", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_REFRESH_TOKEN_KUBAREPORTS" },
+  { binding = "GOOGLE_SERVICE_ACCOUNT_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_SERVICE_ACCOUNT_KEY_KUBAREPORTS" },
+  { binding = "ANTHROPIC_API_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "ANTHROPIC_API_KEY_KUBAREPORTS" },
+]
+
 [env.staging.vars]
 ENVIRONMENT = "staging"
 FORM_URL = "https://tools.kubagroup.com/weekly"
@@ -74,12 +75,22 @@ database_name = "weekly-feedback-staging"
 database_id = "fa77705e-6be9-4ab3-9980-b5205d8d7c1b"
 migrations_dir = "migrations"
 
+# =============================================================================
 # Production environment (tools.kubagroup.com)
+# =============================================================================
 [env.production]
 name = "weekly"
 routes = [
   { pattern = "tools.kubagroup.com/*", zone_name = "kubagroup.com" }
 ]
+# Secrets Store bindings (store ID: 794f14e962284f1f956fb2a4b4d14c00)
+secrets_store_secrets = [
+  { binding = "GOOGLE_CLIENT_SECRET", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_CLIENT_SECRET_KUBAREPORTS" },
+  { binding = "GOOGLE_REFRESH_TOKEN", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_REFRESH_TOKEN_KUBAREPORTS" },
+  { binding = "GOOGLE_SERVICE_ACCOUNT_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_SERVICE_ACCOUNT_KEY_KUBAREPORTS" },
+  { binding = "ANTHROPIC_API_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "ANTHROPIC_API_KEY_KUBAREPORTS" },
+]
+
 [env.production.vars]
 ENVIRONMENT = "production"
 FORM_URL = "https://tools.kubagroup.com/weekly"
