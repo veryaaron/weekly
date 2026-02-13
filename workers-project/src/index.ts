@@ -276,6 +276,39 @@ async function handleApiRequest(
       return response;
     }
 
+    // Email test & validation endpoints
+    if (path === '/api/admin/email/test-config' && request.method === 'POST') {
+      const auth = await authenticate(request, env, logger);
+      requireAdmin(auth);
+      const response = await handleTestEmailConfig(env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    if (path === '/api/admin/email/test-token' && request.method === 'POST') {
+      const auth = await authenticate(request, env, logger);
+      requireAdmin(auth);
+      const response = await handleTestEmailToken(request, env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    if (path === '/api/admin/email/test-send' && request.method === 'POST') {
+      const auth = await authenticate(request, env, logger);
+      requireAdmin(auth);
+      const response = await handleTestEmailSend(request, env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
+    if (path === '/api/admin/email/test-preview' && request.method === 'POST') {
+      const auth = await authenticate(request, env, logger);
+      requireAdmin(auth);
+      const response = await handleTestEmailPreview(request, env, logger);
+      logRequest(logger, request, response, startTime);
+      return response;
+    }
+
     // Settings endpoints
     if (path === '/api/admin/settings' && request.method === 'GET') {
       const response = await handleGetSettings(request, env, logger);
