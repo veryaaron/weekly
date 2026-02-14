@@ -268,7 +268,7 @@ export async function getServiceAccountAccessToken(
  * Returns a result object (never throws) so batch operations can continue.
  */
 export async function sendAsManager(
-  keyJson: string,
+  keyJson: string | object,
   managerEmail: string,
   to: string,
   subject: string,

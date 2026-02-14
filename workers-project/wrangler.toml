@@ -56,8 +56,8 @@ secrets_store_secrets = [
   { binding = "GOOGLE_REFRESH_TOKEN", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_REFRESH_TOKEN_KUBAREPORTS" },
   { binding = "ANTHROPIC_API_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "ANTHROPIC_API_KEY_KUBAREPORTS" },
 ]
-# GOOGLE_SERVICE_ACCOUNT_KEY is stored directly on each worker (JSON type)
-# via Cloudflare dashboard — too large for Secrets Store UI
+# GOOGLE_SERVICE_ACCOUNT_KEY is stored on each worker as a JSON variable
+# via Cloudflare dashboard. Always deploy with --keep-vars to preserve it.
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
@@ -90,8 +90,8 @@ secrets_store_secrets = [
   { binding = "GOOGLE_REFRESH_TOKEN", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "GOOGLE_REFRESH_TOKEN_KUBAREPORTS" },
   { binding = "ANTHROPIC_API_KEY", store_id = "794f14e962284f1f956fb2a4b4d14c00", secret_name = "ANTHROPIC_API_KEY_KUBAREPORTS" },
 ]
-# GOOGLE_SERVICE_ACCOUNT_KEY is stored directly on each worker (JSON type)
-# via Cloudflare dashboard — too large for Secrets Store UI
+# GOOGLE_SERVICE_ACCOUNT_KEY is stored on each worker as a JSON variable
+# via Cloudflare dashboard. Always deploy with --keep-vars to preserve it.
 
 [env.production.vars]
 ENVIRONMENT = "production"
